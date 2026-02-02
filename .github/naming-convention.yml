@@ -1,0 +1,69 @@
+# .github/naming-convention.yml
+# 네이밍 컨벤션 검증 규칙 설정
+# 이 파일을 수정하면 즉시 검증 규칙에 반영됩니다.
+
+tags:
+  allowed:
+    - feat # 새로운 기능 추가
+    - fix # 버그 수정
+    - refactor # 코드 리팩토링
+    - docs # 문서 수정
+    - chore # 빌드, 패키지 관련
+    - test # 테스트 코드
+    - style # 코드 스타일 변경 (포맷팅 등)
+    - perf # 성능 개선
+    - build # 빌드 시스템 변경
+    - ci # CI 설정 변경
+    - revert # 커밋 되돌리기
+    # 프로젝트별 커스텀 태그를 여기에 추가할 수 있습니다
+    # - hotfix   # 긴급 수정
+    # - release  # 릴리즈 관련
+
+patterns:
+  # {tags}는 위에 정의된 allowed 태그로 자동 치환됩니다
+  issue_title: "^({tags}):\\s.+" # feat: 사용자 로그인 기능
+  branch_name: "^({tags})/\\d+$" # feat/123
+  commit_message: "^\\[#\\d+\\];\\s({tags}):\\s.+" # [#123]; feat: 로그인 API
+  pr_title: "^\\[#\\d+\\];\\s({tags}):\\s.+" # [#123]; feat: 로그인 기능
+
+validation:
+  issue:
+    enforce: true # true: 실패 시 Action 실패, false: 경고만
+    comment_on_error: true # 오류 시 이슈에 코멘트 작성
+
+  pull_request:
+    enforce_title: true # PR 제목 검증 강제
+    enforce_branch: true # 브랜치명 검증 강제
+    enforce_commits: false # false: 커밋 메시지는 경고만
+    comment_on_error: true # 검증 결과를 PR에 코멘트로 작성
+
+  push:
+    enforce: false # push 이벤트는 경고만 표시
+
+messages:
+  issue_title_error: |
+    ❌ **이슈 제목 형식 오류**
+
+    올바른 형식: `<tag>: <description>`
+
+    **예시:**
+    - `feat: 사용자 로그인 기능 추가`
+    - `fix: 메모리 누수 문제 해결`
+
+  branch_name_error: |
+    ❌ **브랜치명 형식 오류**
+
+    올바른 형식: `<tag>/<이슈번호>`
+
+    **예시:**
+    - `feat/123`
+    - `fix/456`
+
+  commit_message_warning: |
+    ⚠️ **커밋 메시지 형식 경고**
+
+    올바른 형식: `[#이슈번호]; <tag>: <description>`
+
+    **예시:**
+    - `[#123]; feat: 사용자 인증 API 추가`
+    - `[#456]; fix: null pointer exception 해결`

@@ -1,0 +1,500 @@
+name: Validate Naming Convention
+
+on:
+  issues:
+    types: [opened, edited]
+  pull_request:
+    types: [opened, edited, synchronize]
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  validate-issue:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Read configuration
+        id: config
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const yaml = require('js-yaml');
+
+            try {
+              // YAML 파일 읽기
+              const configPath = '.github/naming-convention.yml';
+              const fileContent = fs.readFileSync(configPath, 'utf8');
+              const config = yaml.load(fileContent);
+              
+              // 설정을 outputs로 저장
+              core.setOutput('tags', config.tags.allowed.join('|'));
+              core.setOutput('issue_pattern', config.patterns.issue_title);
+              core.setOutput('enforce_issue', config.validation.issue.enforce);
+              core.setOutput('comment_on_error', config.validation.issue.comment_on_error);
+              core.setOutput('issue_error_msg', config.messages.issue_title_error);
+              
+              return config;
+            } catch (error) {
+              console.log('설정 파일을 읽을 수 없습니다. 기본값을 사용합니다.');
+              
+              // 기본값 설정
+              core.setOutput('tags', 'feat|fix|refactor|docs|chore|test|style|perf|build|ci|revert');
+              core.setOutput('issue_pattern', '^({tags}):\\s.+');
+              core.setOutput('enforce_issue', 'true');
+              core.setOutput('comment_on_error', 'true');
+              core.setOutput('issue_error_msg', '❌ 이슈 제목이 형식을 따르지 않습니다.');
+              
+              return null;
+            }
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install js-yaml
+        run: npm install js-yaml
+
+      - name: Validate issue title
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const yaml = require('js-yaml');
+            const fs = require('fs');
+
+            let config;
+            try {
+              const configPath = '.github/naming-convention.yml';
+              const fileContent = fs.readFileSync(configPath, 'utf8');
+              config = yaml.load(fileContent);
+            } catch (error) {
+              // 기본 설정 사용
+              config = {
+                tags: {
+                  allowed: ['feat', 'fix', 'refactor', 'docs', 'chore', 'test', 'style', 'perf', 'build', 'ci', 'revert']
+                },
+                patterns: {
+                  issue_title: '^({tags}):\\s.+'
+                },
+                validation: {
+                  issue: {
+                    enforce: true,
+                    comment_on_error: true
+                  }
+                },
+                messages: {
+                  issue_title_error: `❌ **이슈 제목 형식 오류**
+                  
+                  올바른 형식: \`<tag>: <description>\`
+                  
+                  **예시:**
+                  - \`feat: 사용자 로그인 기능 추가\`
+                  - \`fix: 메모리 누수 문제 해결\``
+                }
+              };
+            }
+
+            const issueTitle = context.payload.issue.title;
+            const allowedTags = config.tags.allowed.join('|');
+            const patternString = config.patterns.issue_title.replace('{tags}', allowedTags);
+            const pattern = new RegExp(patternString);
+
+            if (!pattern.test(issueTitle)) {
+              let errorMessage = config.messages.issue_title_error;
+              
+              // 현재 제목 추가
+              errorMessage = `${errorMessage}\n\n**현재 제목:** \`${issueTitle}\``;
+              
+              // 허용되는 태그 목록 추가
+              errorMessage += '\n\n**허용되는 태그:**\n';
+              config.tags.allowed.forEach(tag => {
+                errorMessage += `- \`${tag}\`\n`;
+              });
+              
+              if (config.validation.issue.comment_on_error) {
+                // 이슈에 코멘트 추가
+                await github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: errorMessage
+                });
+              }
+              
+              if (config.validation.issue.enforce) {
+                core.setFailed(`이슈 제목이 컨벤션을 따르지 않습니다: ${issueTitle}`);
+              }
+            } else {
+              console.log(`✅ 이슈 제목 검증 통과: ${issueTitle}`);
+            }
+
+  validate-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install js-yaml
+        run: npm install js-yaml
+
+      - name: Validate PR title
+        id: pr-title
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const yaml = require('js-yaml');
+            const fs = require('fs');
+
+            let config;
+            try {
+              const configPath = '.github/naming-convention.yml';
+              const fileContent = fs.readFileSync(configPath, 'utf8');
+              config = yaml.load(fileContent);
+            } catch (error) {
+              // 기본 설정
+              config = {
+                tags: {
+                  allowed: ['feat', 'fix', 'refactor', 'docs', 'chore', 'test', 'style', 'perf', 'build', 'ci', 'revert']
+                },
+                patterns: {
+                  pr_title: '^\\[#\\d+\\];\\s({tags}):\\s.+'
+                },
+                validation: {
+                  pull_request: {
+                    enforce_title: true
+                  }
+                },
+                messages: {
+                  pr_title_error: `❌ **PR 제목 형식 오류**`
+                }
+              };
+            }
+
+            const prTitle = context.payload.pull_request.title;
+            const allowedTags = config.tags.allowed.join('|');
+            const patternString = config.patterns.pr_title.replace('{tags}', allowedTags);
+            const pattern = new RegExp(patternString);
+
+            if (!pattern.test(prTitle)) {
+              let errorMessage = config.messages.pr_title_error;
+              errorMessage += `\n\n**현재 제목:** \`${prTitle}\``;
+              errorMessage += `\n\n**올바른 형식:** \`[#이슈번호]; <tag>: <description>\``;
+              errorMessage += '\n\n**예시:**\n- `[#123]; feat: 사용자 인증 API 추가`\n- `[#456]; fix: null pointer exception 해결`';
+              
+              if (config.validation.pull_request.enforce_title) {
+                core.setFailed(`PR 제목이 컨벤션을 따르지 않습니다: ${prTitle}`);
+              }
+              core.setOutput('error', errorMessage);
+              return false;
+            } else {
+              console.log(`✅ PR 제목 검증 통과: ${prTitle}`);
+              return true;
+            }
+
+      - name: Validate branch name
+        id: branch-name
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const yaml = require('js-yaml');
+            const fs = require('fs');
+
+            let config;
+            try {
+              const configPath = '.github/naming-convention.yml';
+              const fileContent = fs.readFileSync(configPath, 'utf8');
+              config = yaml.load(fileContent);
+            } catch (error) {
+              config = {
+                tags: {
+                  allowed: ['feat', 'fix', 'refactor', 'docs', 'chore', 'test', 'style', 'perf', 'build', 'ci', 'revert']
+                },
+                patterns: {
+                  branch_name: '^({tags})/\\d+$'
+                },
+                validation: {
+                  pull_request: {
+                    enforce_branch: true
+                  }
+                },
+                messages: {
+                  branch_name_error: `❌ **브랜치명 형식 오류**`
+                }
+              };
+            }
+
+            const branchName = context.payload.pull_request.head.ref;
+            const allowedTags = config.tags.allowed.join('|');
+            const patternString = config.patterns.branch_name.replace('{tags}', allowedTags);
+            const pattern = new RegExp(patternString);
+
+            if (!pattern.test(branchName)) {
+              let errorMessage = config.messages.branch_name_error;
+              errorMessage += `\n\n**현재 브랜치:** \`${branchName}\``;
+              errorMessage += `\n\n**올바른 형식:** \`<tag>/<이슈번호>\``;
+              errorMessage += '\n\n**예시:**\n- `feat/123`\n- `fix/456`\n- `chore/789`';
+              
+              if (config.validation.pull_request.enforce_branch) {
+                core.setFailed(`브랜치명이 컨벤션을 따르지 않습니다: ${branchName}`);
+              }
+              core.setOutput('error', errorMessage);
+              return false;
+            } else {
+              console.log(`✅ 브랜치명 검증 통과: ${branchName}`);
+              return true;
+            }
+
+      - name: Get commit messages
+        id: commits
+        run: |
+          # PR의 모든 커밋 메시지 가져오기
+          COMMITS=$(git log --format=%s origin/${{ github.base_ref }}..HEAD 2>/dev/null || echo "")
+          echo "commits<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Validate commit messages
+        id: commit-messages
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const yaml = require('js-yaml');
+            const fs = require('fs');
+
+            let config;
+            try {
+              const configPath = '.github/naming-convention.yml';
+              const fileContent = fs.readFileSync(configPath, 'utf8');
+              config = yaml.load(fileContent);
+            } catch (error) {
+              config = {
+                tags: {
+                  allowed: ['feat', 'fix', 'refactor', 'docs', 'chore', 'test', 'style', 'perf', 'build', 'ci', 'revert']
+                },
+                patterns: {
+                  commit_message: '^\\[#\\d+\\];\\s({tags}):\\s.+'
+                },
+                validation: {
+                  pull_request: {
+                    enforce_commits: false
+                  }
+                },
+                messages: {
+                  commit_message_warning: `⚠️ **커밋 메시지 형식 경고**`
+                }
+              };
+            }
+
+            const commits = `${{ steps.commits.outputs.commits }}`.trim().split('\n').filter(c => c);
+            const allowedTags = config.tags.allowed.join('|');
+            const patternString = config.patterns.commit_message.replace('{tags}', allowedTags);
+            const pattern = new RegExp(patternString);
+
+            let invalidCommits = [];
+            let validCount = 0;
+
+            for (const commit of commits) {
+              if (commit && !pattern.test(commit)) {
+                invalidCommits.push(commit);
+              } else if (commit) {
+                validCount++;
+              }
+            }
+
+            if (invalidCommits.length > 0) {
+              let warningMessage = config.messages.commit_message_warning;
+              warningMessage += '\n\n일부 커밋이 컨벤션을 따르지 않습니다:\n';
+              warningMessage += invalidCommits.map(c => `- \`${c}\``).join('\n');
+              warningMessage += '\n\n**올바른 형식:** `[#이슈번호]; <tag>: <description>`';
+              warningMessage += '\n\n**예시:**\n- `[#123]; feat: 사용자 인증 API 추가`\n- `[#123]; fix: null 체크 추가`';
+              
+              if (!config.validation.pull_request.enforce_commits) {
+                warningMessage += '\n\nℹ️ 이는 경고이며, PR 병합을 막지는 않습니다.';
+                console.log(`⚠️ ${invalidCommits.length}개의 커밋이 컨벤션을 따르지 않습니다`);
+              } else {
+                core.setFailed(`커밋 메시지가 컨벤션을 따르지 않습니다`);
+              }
+              
+              core.setOutput('warning', warningMessage);
+              return false;
+            } else {
+              console.log(`✅ 모든 커밋 메시지 검증 통과 (${validCount}개)`);
+              return true;
+            }
+
+      - name: Post validation results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const yaml = require('js-yaml');
+            const fs = require('fs');
+
+            let config;
+            try {
+              const configPath = '.github/naming-convention.yml';
+              const fileContent = fs.readFileSync(configPath, 'utf8');
+              config = yaml.load(fileContent);
+            } catch (error) {
+              config = {
+                validation: {
+                  pull_request: {
+                    comment_on_error: true
+                  }
+                }
+              };
+            }
+
+            if (!config.validation.pull_request.comment_on_error) {
+              console.log('코멘트 기능이 비활성화되어 있습니다.');
+              return;
+            }
+
+            const prTitleError = '${{ steps.pr-title.outputs.error }}';
+            const branchError = '${{ steps.branch-name.outputs.error }}';
+            const commitWarning = '${{ steps.commit-messages.outputs.warning }}';
+
+            let comment = '## 📋 네이밍 컨벤션 검증 결과\n\n';
+
+            // PR 제목 검증 결과
+            if (prTitleError) {
+              comment += prTitleError + '\n\n';
+            } else {
+              comment += '✅ **PR 제목**: 통과\n\n';
+            }
+
+            // 브랜치명 검증 결과
+            if (branchError) {
+              comment += branchError + '\n\n';
+            } else {
+              comment += '✅ **브랜치명**: 통과\n\n';
+            }
+
+            // 커밋 메시지 검증 결과
+            if (commitWarning) {
+              comment += commitWarning + '\n\n';
+            } else {
+              comment += '✅ **커밋 메시지**: 모두 통과\n\n';
+            }
+
+            // 설정 파일 정보
+            comment += '\n---\n';
+            comment += '_설정 파일: `.github/naming-convention.yml`_';
+
+            // 기존 봇 코멘트 찾기
+            const comments = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+
+            const botComment = comments.data.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('네이밍 컨벤션 검증 결과')
+            );
+
+            if (botComment) {
+              // 기존 코멘트 업데이트
+              await github.rest.issues.updateComment({
+                comment_id: botComment.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } else {
+              // 새 코멘트 생성
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+
+  validate-push:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install js-yaml
+        run: npm install js-yaml
+
+      - name: Validate commit messages in push
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const yaml = require('js-yaml');
+            const fs = require('fs');
+
+            let config;
+            try {
+              const configPath = '.github/naming-convention.yml';
+              const fileContent = fs.readFileSync(configPath, 'utf8');
+              config = yaml.load(fileContent);
+            } catch (error) {
+              config = {
+                tags: {
+                  allowed: ['feat', 'fix', 'refactor', 'docs', 'chore', 'test', 'style', 'perf', 'build', 'ci', 'revert']
+                },
+                patterns: {
+                  commit_message: '^\\[#\\d+\\];\\s({tags}):\\s.+'
+                },
+                validation: {
+                  push: {
+                    enforce: false
+                  }
+                }
+              };
+            }
+
+            const allowedTags = config.tags.allowed.join('|');
+            const patternString = config.patterns.commit_message.replace('{tags}', allowedTags);
+            const pattern = new RegExp(patternString);
+
+            let hasInvalidCommit = false;
+
+            for (const commit of context.payload.commits) {
+              const message = commit.message.split('\n')[0]; // 첫 줄만 검증
+              
+              if (!pattern.test(message)) {
+                console.log(`⚠️ 커밋 메시지가 컨벤션을 따르지 않습니다: ${message}`);
+                hasInvalidCommit = true;
+              } else {
+                console.log(`✅ 커밋 메시지 검증 통과: ${message}`);
+              }
+            }
+
+            if (hasInvalidCommit) {
+              console.log('\n⚠️ 일부 커밋이 네이밍 컨벤션을 따르지 않습니다.');
+              console.log('올바른 형식: [#이슈번호]; <tag>: <description>');
+              
+              if (config.validation.push.enforce) {
+                core.setFailed('커밋 메시지가 컨벤션을 따르지 않습니다.');
+              }
+            }
