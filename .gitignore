@@ -9,9 +9,10 @@ venv/
 env/
 .env
 
-# md
-.CLAUDE.md
-.GEMINI.md
+# md - 모든 md 파일을 무시하고 싶다면 *.md 사용
+*.md
+# 만약 README.md는 남겨두고 싶다면 아래 한 줄 추가
+!README.md
 
 # IDE
 .idea/
