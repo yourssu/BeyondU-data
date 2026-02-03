@@ -1,4 +1,4 @@
-# BeyondU-Data-Engine: 교환학생 데이터 ETL 파이프라인
+# BeyondU-Data: 교환학생 데이터 ETL 파이프라인
 
 ## 1. 프로젝트 개요
 
