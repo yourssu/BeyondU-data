@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.env
+
+# md
+.CLAUDE.md
+.GEMINI.md
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Data
+data/raw/*.xlsx
+data/raw/*.xls
+data/processed/*.csv
+data/processed/*.json
+
+# Test
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# DB
+test.db
+
+# OS
+.DS_Store
+Thumbs.db
