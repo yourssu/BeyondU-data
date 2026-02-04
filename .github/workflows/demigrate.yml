@@ -44,11 +44,11 @@ jobs:
           # Define project path on EC2
           PROJECT_PATH="/home/ubuntu/BeyondU-Data"
 
-                    # Construct the full DATABASE_URL for MySQL
+                              # Construct the full DATABASE_URL for MySQL
 
-                    # Assuming default MySQL port 3306 and a database named 'mysql' (or your application DB) on RDS
+                              # Assuming default MySQL port 3306 and a database named 'beyondu' (or your application DB) on RDS
 
-                    FULL_DATABASE_URL="mysql+mysqlconnector://${DB_USERNAME}:${DB_PASSWORD}@${DB_URL}:3306/mysql"
+                              FULL_DATABASE_URL="mysql+mysqlconnector://${DB_USERNAME}:${DB_PASSWORD}@${DB_URL}:3306/beyondu"
 
           # SSH to EC2 and run demigration script
           ssh -i key.pem ubuntu@$HOST "
