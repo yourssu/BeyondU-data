@@ -74,8 +74,8 @@ jobs:
             export AWS_SECRET_ACCESS_KEY=\"${{ env.AWS_SECRET_ACCESS_KEY }}\" && \
             export AWS_DEFAULT_REGION=\"ap-northeast-2\" && \
             mkdir -p \"$PROJECT_PATH/data/raw\" && \
-            echo \"Downloading raw data from S3://beyondu-raw-data/raw/ to $PROJECT_PATH/data/raw\" && \
-            aws s3 sync s3://beyondu-raw-data/raw/ \"$PROJECT_PATH/data/raw\" && \
+            echo \"Downloading raw data from S3://beyondu-data/raw/ to $PROJECT_PATH/data/raw\" && \
+            aws s3 sync s3://beyondu-data/raw/ \"$PROJECT_PATH/data/raw\" && \
             if [ $? -ne 0 ]; then
               echo \"Error: AWS S3 sync failed. Ensure bucket exists and credentials are correct.\" && exit 1
             fi && \
