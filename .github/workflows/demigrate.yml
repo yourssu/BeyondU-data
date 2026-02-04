@@ -53,8 +53,11 @@ jobs:
             # Navigate to the project directory
             cd \"$PROJECT_PATH\"
 
-            # Pull the latest changes
-            git pull
+            # Pull the latest changes and ensure the correct branch is checked out
+            git fetch origin
+            git checkout "${{ github.ref_name }}" # Checkout the branch this workflow is running on
+            git reset --hard "origin/${{ github.ref_name }}" # Force update to the latest remote commit of the current branch
+            git clean -fdx # Clean up untracked files and directories, just in case
 
             # Debug: Remove .pyc files and inspect src/config.py on EC2
             find src -name "*.pyc" -delete
