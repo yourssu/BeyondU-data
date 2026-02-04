@@ -53,6 +53,11 @@ jobs:
             # Pull the latest changes
             git pull
 
+            # Debug: Remove .pyc files and inspect src/config.py on EC2
+            find src -name "*.pyc" -delete
+            ls -la src/config.py
+            cat src/config.py
+
             # Install python3-venv if not already installed (idempotent)
             sudo apt-get update && sudo apt-get install -y python3-venv
 
