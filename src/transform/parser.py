@@ -1,9 +1,8 @@
 """Parse requirement fields from text to structured data."""
 
 import re
-from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, List, Optional, Union, Dict, Tuple
+from typing import Any, List, Optional, Union, Dict, Tuple, Callable
 
 
 @dataclass
