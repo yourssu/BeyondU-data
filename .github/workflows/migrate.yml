@@ -30,11 +30,14 @@ jobs:
           echo "$SSH_KEY" > key.pem
           chmod 600 key.pem
 
+          # Validate DB_URL secret
+          if [ -z "$DB_URL" ]; then
+            echo "Error: DB_URL secret is not set or is empty. Please configure the DB_URL secret in your repository settings."
+            exit 1
+          fi
+
           # Define project path on EC2
           PROJECT_PATH="/home/ubuntu/BeyondU-Data"
-
-          # Create .env file directly on EC2
-          ssh -i key.pem ubuntu@$HOST "echo \"DATABASE_URL=$DB_URL\" > $PROJECT_PATH/.env"
 
           # SSH to EC2 and run migration script
           ssh -i key.pem ubuntu@$HOST "
@@ -50,17 +53,10 @@ jobs:
           python3 -m venv venv
           source venv/bin/activate
           pip install -r requirements.txt
-
-
-
           if [ "${{ github.event.inputs.confirm_migration }}" != "true" ]; then
             echo "Database migration not confirmed. Exiting."
             exit 1
           fi
-
-          # Run the ETL script
-          # This example processes only the latest file from the 'data/raw' directory and initializes the DB.
-          # You can customize the arguments as needed.
-          python scripts/run_etl.py --input data/raw --latest-only --init-db
-
+          # Run the ETL script with DATABASE_URL as environment variable
+          DATABASE_URL="$DB_URL" python scripts/run_etl.py --input data/raw --latest-only --init-db
           "

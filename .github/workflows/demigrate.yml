@@ -33,11 +33,14 @@ jobs:
           echo "$SSH_KEY" > key.pem
           chmod 600 key.pem
 
+          # Validate DB_URL secret
+          if [ -z "$DB_URL" ]; then
+            echo "Error: DB_URL secret is not set or is empty. Please configure the DB_URL secret in your repository settings."
+            exit 1
+          fi
+
           # Define project path on EC2
           PROJECT_PATH="/home/ubuntu/BeyondU-Data"
-
-          # Create .env file directly on EC2
-          ssh -i key.pem ubuntu@$HOST "echo \"DATABASE_URL=$DB_URL\" > $PROJECT_PATH/.env"
 
           # SSH to EC2 and run demigration script
           ssh -i key.pem ubuntu@$HOST "
@@ -52,11 +55,15 @@ jobs:
             source venv/bin/activate
             pip install -r requirements.txt
 
-            if [ "${{ github.event.inputs.confirm_drop_db }}" != "true" ]; then
-              echo "Database drop not confirmed. Exiting."
-              exit 1
-            fi
+                        if [ "${{ github.event.inputs.confirm_drop_db }}" != "true" ]; then
 
-            # Run the ETL script with --drop-db to clear all data
-            python scripts/run_etl.py --drop-db
+                          echo "Database drop not confirmed. Exiting."
+
+                          exit 1
+
+                        fi
+
+                        # Run the ETL script with --drop-db to clear all data, passing DATABASE_URL as environment variable
+
+                        DATABASE_URL="$DB_URL" python scripts/run_etl.py --drop-db
           "
