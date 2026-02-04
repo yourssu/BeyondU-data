@@ -57,6 +57,9 @@ class DatabaseLoader:
 
     def __init__(self, database_url: Optional[str] = None):
         self.database_url = database_url or settings.database_url
+        print(f"DEBUG: DATABASE_URL = {self.database_url}, type = {type(self.database_url)}")
+        if not self.database_url or "://" not in self.database_url:
+            raise ValueError(f"Invalid DATABASE_URL: {self.database_url}")
         self.engine = create_engine(self.database_url)
         self.SessionLocal = sessionmaker(bind=self.engine)
         self._language_parser = LanguageParser()

@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # Database
-    database_url: str = "sqlite:///test.db"
+    database_url: str = "postgresql+psycopg2://user:password@host:5432/dbname"
 
     # AWS
     aws_access_key_id: str = ""
