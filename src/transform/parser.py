@@ -1,8 +1,10 @@
 """Parse requirement fields from text to structured data."""
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Any
+from typing import Any
+
 
 @dataclass
 class ParsedScoreInfo:
