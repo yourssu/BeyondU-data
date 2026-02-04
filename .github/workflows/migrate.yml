@@ -31,8 +31,8 @@ jobs:
           # Setup SSH
           mkdir -p ~/.ssh && \
           ssh-keyscan -H $HOST >> ~/.ssh/known_hosts && \
-          echo "$SSH_KEY" > key.pem && \
-          chmod 600 key.pem
+          echo "$SSH_KEY" > ~/.ssh/key.pem && \
+          chmod 600 ~/.ssh/key.pem
 
           # Validate DB secrets
           if [ -z "$DB_URL" ] || [ -z "$DB_USERNAME" ] || [ -z "$DB_PASSWORD" ]; then
@@ -47,7 +47,7 @@ jobs:
           FULL_DATABASE_URL="mysql+mysqlconnector://${DB_USERNAME}:${DB_PASSWORD}@${DB_URL}:3306/beyondu"
 
           # SSH to EC2 and run migration script
-          ssh -i key.pem ubuntu@$HOST "
+          ssh -i ~/.ssh/key.pem ubuntu@$HOST "
             # Check if project directory exists, if not clone it, then navigate and pull
             if [ ! -d \"$PROJECT_PATH\" ]; then
               echo \"Cloning repository to $PROJECT_PATH\" && \
@@ -64,8 +64,12 @@ jobs:
             ls -la src/config.py && \
             cat src/config.py
 
-            # --- Start of S3 Download Logic ---
-            sudo apt-get update && sudo apt-get install -y awscli && \
+            # --- Start of S3 Download Logic (awscli v2 installation) ---
+            sudo apt-get update && sudo apt-get install -y curl unzip && \
+            curl \"https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip\" -o awscliv2.zip && \
+            unzip awscliv2.zip && \
+            sudo ./aws/install && \
+            rm -rf awscliv2.zip aws && \
             export AWS_ACCESS_KEY_ID=\"${{ env.AWS_ACCESS_KEY_ID }}\" && \
             export AWS_SECRET_ACCESS_KEY=\"${{ env.AWS_SECRET_ACCESS_KEY }}\" && \
             export AWS_DEFAULT_REGION=\"ap-northeast-2\" && \
@@ -89,6 +93,3 @@ jobs:
             fi && \
             DATABASE_URL=\"$FULL_DATABASE_URL\" python scripts/run_etl.py --input data/raw --latest-only --init-db
           "
-
-
-          
