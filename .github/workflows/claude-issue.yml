@@ -1,8 +1,8 @@
-name: Claude Assistant- Issue Review
+# name: Claude Assistant- Issue Review
 
-on:
-  issues:
-    types: [labeled]
+# on:
+#   issues:
+#     types: [labeled]
 
 permissions:
   issues: write

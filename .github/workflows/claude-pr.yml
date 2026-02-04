@@ -1,10 +1,10 @@
-name: Claude Assistant - Pull Request Review
+# name: Claude Assistant - Pull Request Review
 
-on:
-  pull_request_review:
-    types: [submitted]
-  pull_request_review_comment:
-    types: [created]
+# on:
+#   pull_request_review:
+#     types: [submitted]
+#   pull_request_review_comment:
+#     types: [created]
 
 permissions:
   issues: write
