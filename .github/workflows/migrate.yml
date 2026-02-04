@@ -8,6 +8,7 @@ on:
         required: true
         type: boolean
         default: false
+
 jobs:
   migrate:
     runs-on: ubuntu-latest
@@ -15,81 +16,116 @@ jobs:
     permissions:
       id-token: write
       contents: read
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Deploy to EC2
+
+      - name: Deploy to EC2 and Run Migration
         env:
           SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
-          HOST: ${{ secrets.EC2_STG_HOST }} # Assuming STG host is for RDS
-          DB_URL: ${{ secrets.DB_URL }} # DB_URL secret now holds the DB host
+          HOST: ${{ secrets.EC2_STG_HOST }}
+          DB_URL: ${{ secrets.DB_URL }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-          # Setup SSH
-          mkdir -p ~/.ssh && \
-          ssh-keyscan -H $HOST >> ~/.ssh/known_hosts && \
-          echo "$SSH_KEY" > ~/.ssh/key.pem && \
+          set -e
+
+          # --------------------
+          # SSH SETUP
+          # --------------------
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+          echo "$SSH_KEY" > ~/.ssh/key.pem
           chmod 600 ~/.ssh/key.pem
 
-          # Validate DB secrets
+          # --------------------
+          # VALIDATE SECRETS
+          # --------------------
           if [ -z "$DB_URL" ] || [ -z "$DB_USERNAME" ] || [ -z "$DB_PASSWORD" ]; then
-            echo "Error: One or more DB secrets (DB_URL, DB_USERNAME, DB_PASSWORD) are not set or are empty. Please configure them in your repository settings."
+            echo "❌ DB secrets are missing"
             exit 1
           fi
 
-          # Define project path on EC2
           PROJECT_PATH="/home/ubuntu/BeyondU-Data"
-
-          # Construct the full DATABASE_URL for MySQL
           FULL_DATABASE_URL="mysql+mysqlconnector://${DB_USERNAME}:${DB_PASSWORD}@${DB_URL}:3306/beyondu"
 
-          # SSH to EC2 and run migration script
-          ssh -i ~/.ssh/key.pem ubuntu@$HOST "
-            # Check if project directory exists, if not clone it, then navigate and pull
-            if [ ! -d \"$PROJECT_PATH\" ]; then
-              echo \"Cloning repository to $PROJECT_PATH\" && \
-              git clone https://github.com/${{ github.repository }}.git \"$PROJECT_PATH\"
-            fi && \
-            cd \"$PROJECT_PATH\" && \
-            git fetch origin && \
-            git checkout \"${{ github.ref_name }}\" && \
-            git reset --hard \"origin/${{ github.ref_name }}\" && \
-            git clean -fdx # Clean up untracked files and directories
+          # --------------------
+          # REMOTE EXECUTION
+          # --------------------
+          ssh -i ~/.ssh/key.pem ubuntu@"$HOST" << EOF
+          set -e
 
-            # Debug: Remove .pyc files and inspect src/config.py on EC2
-            find src -name \"*.pyc\" -delete && \
-            ls -la src/config.py && \
-            cat src/config.py
+          echo "🚀 Starting migration on EC2"
 
-            # --- Start of S3 Download Logic (awscli v2 installation) ---
-            sudo apt-get update && sudo apt-get install -y curl unzip && \
-            curl \"https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip\" -o awscliv2.zip && \
-            unzip awscliv2.zip && \
-            sudo ./aws/install && \
-            rm -rf awscliv2.zip aws && \
-            export AWS_ACCESS_KEY_ID=\"${{ env.AWS_ACCESS_KEY_ID }}\" && \
-            export AWS_SECRET_ACCESS_KEY=\"${{ env.AWS_SECRET_ACCESS_KEY }}\" && \
-            export AWS_DEFAULT_REGION=\"ap-northeast-2\" && \
-            mkdir -p \"$PROJECT_PATH/data/raw\" && \
-            echo \"Downloading raw data from S3://beyondu-data/raw/ to $PROJECT_PATH/data/raw\" && \
-            aws s3 sync s3://beyondu-data/raw/ \"$PROJECT_PATH/data/raw\" && \
-            if [ $? -ne 0 ]; then
-              echo \"Error: AWS S3 sync failed. Ensure bucket exists and credentials are correct.\" && exit 1
-            fi && \
-            echo \"S3 download complete. Listing files in "$PROJECT_PATH/data/raw":\" && \
-            ls -la \"$PROJECT_PATH/data/raw\"
-            # --- End of S3 Download Logic ---
+          # --------------------
+          # PROJECT SETUP
+          # --------------------
+          if [ ! -d "$PROJECT_PATH" ]; then
+            git clone https://github.com/${{ github.repository }}.git "$PROJECT_PATH"
+          fi
 
-            sudo apt-get update && sudo apt-get install -y python3-venv && \
-            python3 -m venv venv && \
-            source venv/bin/activate && \
-            pip install -r requirements.txt
+          cd "$PROJECT_PATH"
+          git fetch origin
+          git checkout "${{ github.ref_name }}"
+          git reset --hard "origin/${{ github.ref_name }}"
+          git clean -fdx
 
-            if [ \"${{ github.event.inputs.confirm_migration }}\" != \"true\" ]; then
-              echo \"Database migration not confirmed. Exiting.\" && exit 1
-            fi && \
-            DATABASE_URL=\"$FULL_DATABASE_URL\" python scripts/run_etl.py --input data/raw --latest-only --init-db
-          "
+          find src -name "*.pyc" -delete
+
+          # --------------------
+          # AWS CLI (SAFE INSTALL)
+          # --------------------
+          if ! command -v aws >/dev/null 2>&1; then
+            echo "📦 Installing awscli via apt"
+            sudo apt-get update
+            sudo apt-get install -y awscli
+          else
+            echo "✅ awscli already installed"
+          fi
+
+          aws --version
+
+          export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
+          export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
+          export AWS_DEFAULT_REGION="ap-northeast-2"
+
+          # --------------------
+          # S3 DATA SYNC
+          # --------------------
+          mkdir -p data/raw
+          echo "📥 Syncing data from S3"
+          aws s3 sync s3://beyondu-data/raw/ data/raw
+
+          ls -la data/raw
+
+          # --------------------
+          # PYTHON ENV
+          # --------------------
+          sudo apt-get update
+          sudo apt-get install -y python3-venv
+
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+          # --------------------
+          # SAFETY CHECK
+          # --------------------
+          if [ "${{ github.event.inputs.confirm_migration }}" != "true" ]; then
+            echo "⚠️ Migration not confirmed. Exiting."
+            exit 1
+          fi
+
+          # --------------------
+          # RUN ETL
+          # --------------------
+          echo "🔥 Running ETL"
+          DATABASE_URL="$FULL_DATABASE_URL" \
+          python scripts/run_etl.py --input data/raw --latest-only --init-db
+
+          echo "✅ Migration completed"
+          EOF
