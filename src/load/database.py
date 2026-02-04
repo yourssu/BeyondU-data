@@ -1,6 +1,6 @@
 """Database operations for loading processed data."""
 
-from typing import Any
+from typing import Any, List, Optional, Union, Dict, Tuple
 
 import pandas as pd
 from sqlalchemy import create_engine, delete, select
@@ -202,20 +202,20 @@ class DatabaseLoader:
                 return default
         return str(value).strip() if isinstance(value, str) else value
 
-    def get_all_universities(self) -> list[University]:
+    def get_all_universities(self) -> List[University]:
         with self.SessionLocal() as session:
             return list(session.execute(select(University).order_by(University.name_kor)).scalars().all())
 
-    def get_language_requirements(self, university_id: int) -> list[LanguageRequirement]:
+    def get_language_requirements(self, university_id: int) -> List[LanguageRequirement]:
         with self.SessionLocal() as session:
             stmt = select(LanguageRequirement).where(LanguageRequirement.university_id == university_id)
             return list(session.execute(stmt).scalars().all())
 
-    def get_all_language_requirements(self) -> list[LanguageRequirement]:
+    def get_all_language_requirements(self) -> List[LanguageRequirement]:
         with self.SessionLocal() as session:
             return list(session.execute(select(LanguageRequirement).order_by(LanguageRequirement.university_id, LanguageRequirement.exam_type)).scalars().all())
 
-    def search_universities_by_language(self, exam_type: str, user_score: float) -> list[University]:
+    def search_universities_by_language(self, exam_type: str, user_score: float) -> List[University]:
         with self.SessionLocal() as session:
             stmt = (
                 select(University)

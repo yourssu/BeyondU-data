@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from typing import Any, cast, Union, List
+from typing import Any, cast, List, Dict, Optional, Union, Tuple
 
 import pandas as pd
 from openpyxl import load_workbook
@@ -109,23 +109,23 @@ class ExcelReader:
             for row in range(merged_range.min_row, merged_range.max_row + 1):
                 for col in range(merged_range.min_col, merged_range.max_col + 1):
                     merged_cell_map[(row, col)] = value
-        data: list[list[Any]] = []
+        data: List[List[Any]] = []
         for row_idx, row in enumerate(ws.iter_rows(), start=1):
-            row_data: list[Any] = []
+            row_data: List[Any] = []
             for col_idx, cell in enumerate(row, start=1):
                 value = merged_cell_map.get((row_idx, col_idx)) if isinstance(cell, MergedCell) else cell.value
                 row_data.append(value)
             data.append(row_data)
         return data
 
-    def _find_header_row(self, data: list[list[Any]]) -> Union[int, None]:
+    def _find_header_row(self, data: List[List[Any]]) -> Union[int, None]:
         for i, row in enumerate(data[:10]):
             row_str = " ".join(str(x) for x in row if x)
             if any(keyword in row_str for keyword in self.HEADER_KEYWORDS):
                 return i
         return None
 
-    def _is_header_continuation(self, row: list[Any]) -> bool:
+    def _is_header_continuation(self, row: List[Any]) -> bool:
         non_empty = [x for x in row if x and str(x).strip()]
         if len(non_empty) <= 5:
             for val in non_empty:
@@ -133,7 +133,7 @@ class ExcelReader:
                     return True
         return False
 
-    def _merge_headers(self, header1: list[Any], header2: list[Any]) -> list[Any]:
+    def _merge_headers(self, header1: List[Any], header2: List[Any]) -> List[Any]:
         merged = []
         for h1, h2 in zip(header1, header2):
             if h1 and str(h1).strip():
@@ -180,11 +180,11 @@ class ExcelReader:
                 df[col] = df[col].apply(lambda x: str(x).strip() if pd.notna(x) else x)
         return df.reset_index(drop=True)
 
-    def get_sheet_names(self) -> list[str]:
+    def get_sheet_names(self) -> List[str]:
         wb = load_workbook(self.file_path, read_only=True)
         names = wb.sheetnames
         wb.close()
-        return cast(list[str], names)
+        return cast(List[str], names)
 
     def extract_file_metadata(self) -> dict[str, str | None]:
         filename = self.file_path.stem
