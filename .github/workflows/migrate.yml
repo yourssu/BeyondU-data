@@ -21,8 +21,10 @@ jobs:
       - name: Deploy to EC2
         env:
           SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
-          HOST: ${{ secrets.EC2_STG_HOST }}
-          DB_URL: ${{ secrets.DB_URL }}
+          HOST: ${{ secrets.EC2_STG_HOST }} # Assuming STG host is for RDS
+          DB_URL: ${{ secrets.DB_URL }} # DB_URL secret now holds the DB host
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
           # Setup SSH
           mkdir -p ~/.ssh
@@ -30,50 +32,106 @@ jobs:
           echo "$SSH_KEY" > key.pem
           chmod 600 key.pem
 
-          # Validate DB_URL secret
-          if [ -z "$DB_URL" ]; then
-            echo "Error: DB_URL secret is not set or is empty. Please configure the DB_URL secret in your repository settings."
-            exit 1
-          fi
+                    # Validate DB secrets
 
-          # Define project path on EC2
-          PROJECT_PATH="/home/ubuntu/BeyondU-Data"
+                    if [ -z "$DB_URL" ] || [ -z "$DB_USERNAME" ] || [ -z "$DB_PASSWORD" ]; then
 
-          # SSH to EC2 and run migration script
-          ssh -i key.pem ubuntu@$HOST "
-            # Check if project directory exists, if not clone it
-            if [ ! -d \"$PROJECT_PATH\" ]; then
-              echo \"Cloning repository to $PROJECT_PATH\"
-              git clone https://github.com/${{ github.repository }}.git \"$PROJECT_PATH\"
-            fi
+                      echo "Error: One or more DB secrets (DB_URL, DB_USERNAME, DB_PASSWORD) are not set or are empty. Please configure them in your repository settings."
 
-            # Navigate to the project directory
-            cd \"$PROJECT_PATH\"
+                      exit 1
 
-            # Pull the latest changes and ensure the correct branch is checked out
-            git fetch origin
-            git checkout "${{ github.ref_name }}" # Checkout the branch this workflow is running on
-            git reset --hard "origin/${{ github.ref_name }}" # Force update to the latest remote commit of the current branch
-            git clean -fdx # Clean up untracked files and directories, just in case
+                    fi
 
-            # Debug: Remove .pyc files and inspect src/config.py on EC2
-            find src -name "*.pyc" -delete
-            ls -la src/config.py
-            cat src/config.py
+          
 
-            # Install python3-venv if not already installed (idempotent)
-            sudo apt-get update && sudo apt-get install -y python3-venv
+                    # Define project path on EC2
 
-            # Set up python virtual environment and install dependencies
-            python3 -m venv venv
-            source venv/bin/activate
-            pip install -r requirements.txt
+                    PROJECT_PATH="/home/ubuntu/BeyondU-Data"
 
-            if [ \"${{ github.event.inputs.confirm_migration }}\" != \"true\" ]; then
-              echo \"Database migration not confirmed. Exiting.\"
-              exit 1
-            fi
+          
 
-            # Run the ETL script with DATABASE_URL as environment variable
-            DATABASE_URL=\"$DB_URL\" python scripts/run_etl.py --input data/raw --latest-only --init-db
-          "
+                    # Construct the full DATABASE_URL for PostgreSQL
+
+                    # Assuming default PostgreSQL port 5432 and a database named 'ground-prd' on RDS
+
+                    FULL_DATABASE_URL="postgresql+psycopg2://${DB_USERNAME}:${DB_PASSWORD}@${DB_URL}:5432/ground-prd"
+
+          
+
+                    # SSH to EC2 and run migration script
+
+                    ssh -i key.pem ubuntu@$HOST "
+
+                      # Check if project directory exists, if not clone it
+
+                      if [ ! -d \"$PROJECT_PATH\" ]; then
+
+                        echo \"Cloning repository to $PROJECT_PATH\"
+
+                        git clone https://github.com/${{ github.repository }}.git \"$PROJECT_PATH\"
+
+                      fi
+
+          
+
+                      # Navigate to the project directory
+
+                      cd \"$PROJECT_PATH\"
+
+          
+
+                      # Pull the latest changes and ensure the correct branch is checked out
+
+                      git fetch origin
+
+                      git checkout "${{ github.ref_name }}" # Checkout the branch this workflow is running on
+
+                      git reset --hard "origin/${{ github.ref_name }}" # Force update to the latest remote commit of the current branch
+
+                      git clean -fdx # Clean up untracked files and directories, just in case
+
+          
+
+                      # Debug: Remove .pyc files and inspect src/config.py on EC2
+
+                      find src -name "*.pyc" -delete
+
+                      ls -la src/config.py
+
+                      cat src/config.py
+
+          
+
+                      # Install python3-venv if not already installed (idempotent)
+
+                      sudo apt-get update && sudo apt-get install -y python3-venv
+
+          
+
+                      # Set up python virtual environment and install dependencies
+
+                      python3 -m venv venv
+
+                      source venv/bin/activate
+
+                      pip install -r requirements.txt
+
+          
+
+                      if [ \"${{ github.event.inputs.confirm_migration }}\" != \"true\" ]; then
+
+                        echo \"Database migration not confirmed. Exiting.\"
+
+                        exit 1
+
+                      fi
+
+          
+
+                      # Run the ETL script with DATABASE_URL as environment variable
+
+                      DATABASE_URL=\"$FULL_DATABASE_URL\" python scripts/run_etl.py --input data/raw --latest-only --init-db
+
+                    "
+
+          
