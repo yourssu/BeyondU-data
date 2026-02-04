@@ -30,14 +30,11 @@ jobs:
           echo "$SSH_KEY" > key.pem
           chmod 600 key.pem
 
-          # Create .env file
-          echo "DATABASE_URL=$DB_URL" > .env
-
           # Define project path on EC2
           PROJECT_PATH="/home/ubuntu/BeyondU-Data"
 
-          # SCP .env file to EC2
-          scp -i key.pem .env ubuntu@$HOST:$PROJECT_PATH/.env
+          # Create .env file directly on EC2
+          ssh -i key.pem ubuntu@$HOST "echo \"DATABASE_URL=$DB_URL\" > $PROJECT_PATH/.env"
 
           # SSH to EC2 and run migration script
           ssh -i key.pem ubuntu@$HOST "
