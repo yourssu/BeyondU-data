@@ -36,8 +36,11 @@ jobs:
           # --------------------
           # SSH SETUP
           # --------------------
+          HOST="$(echo "$HOST" | tr -d '\r\n ')"
+          echo "🔍 Using HOST=[$HOST]"
+
           mkdir -p ~/.ssh
-          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts || true
           echo "$SSH_KEY" > ~/.ssh/key.pem
           chmod 600 ~/.ssh/key.pem
 
@@ -79,9 +82,12 @@ jobs:
           # AWS CLI (SAFE INSTALL)
           # --------------------
           if ! command -v aws >/dev/null 2>&1; then
-            echo "📦 Installing awscli via apt"
-            sudo apt-get update
-            sudo apt-get install -y awscli
+            echo "📦 Installing awscli v2"
+            sudo apt-get update && sudo apt-get install -y curl unzip
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o awscliv2.zip
+            unzip awscliv2.zip
+            sudo ./aws/install
+            rm -rf awscliv2.zip aws
           else
             echo "✅ awscli already installed"
           fi
