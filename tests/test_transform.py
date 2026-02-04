@@ -1,7 +1,6 @@
 """Tests for transform module."""
 
 import pandas as pd
-import pytest
 
 from src.transform.cleaner import DataCleaner
 
