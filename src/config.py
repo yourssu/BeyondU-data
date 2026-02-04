@@ -1,6 +1,7 @@
 """Configuration settings for the ETL pipeline."""
 
 from pathlib import Path
+from typing import List
 
 from pydantic_settings import BaseSettings
 
@@ -9,7 +10,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # Database
-    database_url: str = "sqlite:///test.db"
+    database_url: str = "postgresql+psycopg2://user:password@host:5432/dbname"
 
     # AWS
     aws_access_key_id: str = ""
@@ -22,7 +23,7 @@ class Settings(BaseSettings):
     processed_data_dir: Path = Path("data/processed")
 
     # ETL Settings
-    excluded_institutions: list[str] = ["SAF", "ACUCA"]
+    excluded_institutions: List[str] = ["SAF", "ACUCA"]
 
     # Environment
     env: str = "development"

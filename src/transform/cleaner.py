@@ -1,6 +1,7 @@
 """Data cleaning and normalization utilities."""
 
 import re
+from typing import Optional
 
 import pandas as pd
 
@@ -40,7 +41,7 @@ class DataCleaner:
         if "min_gpa" in self.df.columns:
             self.df["min_gpa"] = self.df["min_gpa"].apply(self._parse_gpa)
 
-    def _parse_gpa(self, value: str | None) -> str | None:
+    def _parse_gpa(self, value: Optional[str]) -> Optional[str]:
         """Parse GPA value to normalized format."""
         if value is None or pd.isna(value):
             return None

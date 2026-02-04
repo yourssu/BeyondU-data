@@ -1,6 +1,6 @@
 """Database operations for loading processed data."""
 
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from sqlalchemy import create_engine, delete, select
@@ -55,15 +55,18 @@ class DatabaseLoader:
         "칠레": "남미",
     }
 
-    def __init__(self, database_url: str | None = None):
+    def __init__(self, database_url: Optional[str] = None):
         self.database_url = database_url or settings.database_url
+        print(f"DEBUG: DATABASE_URL = {self.database_url}, type = {type(self.database_url)}")
+        if not self.database_url or "://" not in self.database_url:
+            raise ValueError(f"Invalid DATABASE_URL: {self.database_url}")
         self.engine = create_engine(self.database_url)
         self.SessionLocal = sessionmaker(bind=self.engine)
         self._language_parser = LanguageParser()
         self._gpa_parser = GPAParser()
         self._website_url_parser = WebsiteURLParser()
 
-    def get_region_from_nation(self, nation: str) -> str | None:
+    def get_region_from_nation(self, nation: str) -> Optional[str]:
         """Get region from nation using the mapping."""
         return self.COUNTRY_TO_REGION_MAP.get(nation)
 
@@ -96,7 +99,7 @@ class DatabaseLoader:
             session.add(record)
         return len(parsed_req.scores)
 
-    def load_universities_dataframe(self, df: pd.DataFrame) -> dict[str, int]:
+    def load_universities_dataframe(self, df: pd.DataFrame) -> Dict[str, int]:
         """Load a cleaned DataFrame into the database using an upsert strategy."""
         stats = {"inserted": 0, "updated": 0, "skipped": 0, "language_reqs": 0}
         with self.SessionLocal() as session:
@@ -202,20 +205,20 @@ class DatabaseLoader:
                 return default
         return str(value).strip() if isinstance(value, str) else value
 
-    def get_all_universities(self) -> list[University]:
+    def get_all_universities(self) -> List[University]:
         with self.SessionLocal() as session:
             return list(session.execute(select(University).order_by(University.name_kor)).scalars().all())
 
-    def get_language_requirements(self, university_id: int) -> list[LanguageRequirement]:
+    def get_language_requirements(self, university_id: int) -> List[LanguageRequirement]:
         with self.SessionLocal() as session:
             stmt = select(LanguageRequirement).where(LanguageRequirement.university_id == university_id)
             return list(session.execute(stmt).scalars().all())
 
-    def get_all_language_requirements(self) -> list[LanguageRequirement]:
+    def get_all_language_requirements(self) -> List[LanguageRequirement]:
         with self.SessionLocal() as session:
             return list(session.execute(select(LanguageRequirement).order_by(LanguageRequirement.university_id, LanguageRequirement.exam_type)).scalars().all())
 
-    def search_universities_by_language(self, exam_type: str, user_score: float) -> list[University]:
+    def search_universities_by_language(self, exam_type: str, user_score: float) -> List[University]:
         with self.SessionLocal() as session:
             stmt = (
                 select(University)

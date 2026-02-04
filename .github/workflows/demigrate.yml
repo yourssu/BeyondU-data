@@ -24,8 +24,10 @@ jobs:
       - name: Deploy to EC2
         env:
           SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
-          HOST: ${{ secrets.EC2_STG_HOST }}
-          DB_URL: ${{ secrets.DB_URL }}
+          HOST: ${{ secrets.EC2_STG_HOST }} # Assuming STG host is for RDS
+          DB_URL: ${{ secrets.DB_URL }} # DB_URL secret now holds the DB host
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
           # Setup SSH
           mkdir -p ~/.ssh
@@ -33,37 +35,25 @@ jobs:
           echo "$SSH_KEY" > key.pem
           chmod 600 key.pem
 
-          # Validate DB_URL secret
-          if [ -z "$DB_URL" ]; then
-            echo "Error: DB_URL secret is not set or is empty. Please configure the DB_URL secret in your repository settings."
+          # Validate DB secrets
+          if [ -z "$DB_URL" ] || [ -z "$DB_USERNAME" ] || [ -z "$DB_PASSWORD" ]; then
+            echo "Error: One or more DB secrets (DB_URL, DB_USERNAME, DB_PASSWORD) are not set or are empty. Please configure them in your repository settings."
             exit 1
           fi
 
           # Define project path on EC2
           PROJECT_PATH="/home/ubuntu/BeyondU-Data"
 
+                              # Construct the full DATABASE_URL for MySQL
+
+                              # Assuming default MySQL port 3306 and a database named 'beyondu' (or your application DB) on RDS
+
+                              FULL_DATABASE_URL="mysql+mysqlconnector://${DB_USERNAME}:${DB_PASSWORD}@${DB_URL}:3306/beyondu"
+
           # SSH to EC2 and run demigration script
           ssh -i key.pem ubuntu@$HOST "
-            # Navigate to the project directory
-            cd $PROJECT_PATH
+            # ... (inside SSH block) ...
 
-            # Pull the latest changes
-            git pull
-
-            # Set up python virtual environment and install dependencies
-            python3 -m venv venv
-            source venv/bin/activate
-            pip install -r requirements.txt
-
-                        if [ "${{ github.event.inputs.confirm_drop_db }}" != "true" ]; then
-
-                          echo "Database drop not confirmed. Exiting."
-
-                          exit 1
-
-                        fi
-
-                        # Run the ETL script with --drop-db to clear all data, passing DATABASE_URL as environment variable
-
-                        DATABASE_URL="$DB_URL" python scripts/run_etl.py --drop-db
+            # Run the ETL script with --drop-db to clear all data, passing DATABASE_URL as environment variable
+            DATABASE_URL=\"$FULL_DATABASE_URL\" python scripts/run_etl.py --drop-db
           "

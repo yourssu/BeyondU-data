@@ -1,9 +1,8 @@
 """Parse requirement fields from text to structured data."""
 
 import re
-from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 
 @dataclass
@@ -11,7 +10,7 @@ class ParsedScoreInfo:
     """단일 어학 점수 파싱 결과."""
     exam_type: str
     min_score: float
-    level_code: str | None
+    level_code: Optional[str]
     language_group: str
     source: str
 
@@ -19,9 +18,9 @@ class ParsedScoreInfo:
 @dataclass
 class ParsedLanguageRequirement:
     """한 대학의 어학 요구사항 전체 파싱 결과."""
-    scores: list[ParsedScoreInfo] = field(default_factory=list)
+    scores: List[ParsedScoreInfo] = field(default_factory=list)
     is_optional: bool = False
-    excluded_tests: list[str] = field(default_factory=list)
+    excluded_tests: List[str] = field(default_factory=list)
     raw_text: str = ""
 
 
@@ -29,7 +28,7 @@ class ParsedLanguageRequirement:
 # 숭실대학교 공인 어학 성적 기준표 (2024년 기준)
 # ============================================================================
 
-LANGUAGE_STANDARDS: dict[str, Any] = { # Added type hint for LANGUAGE_STANDARDS
+LANGUAGE_STANDARDS: Dict[str, Any] = { # Added type hint for LANGUAGE_STANDARDS
     "A1": {"category": "ENGLISH", "scores": {"TOEFL": 85.0, "IELTS": 6.5, "TOEIC": 900.0, "TOEFL_ITP": 600.0}},
     "A2": {"category": "ENGLISH", "scores": {"TOEFL": 80.0, "IELTS": 6.0, "TOEIC": 850.0, "TOEFL_ITP": 560.0}},
     "A3": {"category": "ENGLISH", "scores": {"TOEFL": 75.0, "IELTS": 5.5, "TOEIC": 800.0, "TOEFL_ITP": 545.0}},
@@ -53,13 +52,13 @@ LANGUAGE_STANDARDS: dict[str, Any] = { # Added type hint for LANGUAGE_STANDARDS
     "C2": {"category": "JAPANESE", "scores": {"JLPT": 2.0, "JPT": 600.0}},
 }
 
-LEGACY_CODE_ALIASES: dict[str, str] = { # Added type hint for LEGACY_CODE_ALIASES
+LEGACY_CODE_ALIASES: Dict[str, str] = { # Added type hint for LEGACY_CODE_ALIASES
     "A-1": "A1", "A-2": "A2", "A-3": "A3", "A-4": "A4", "A-5": "A5",
     "B-1": "B1", "B-2": "B2", "B-3": "B3", "C-1": "C1", "C-2": "C2",
     "D-1": "D1", "D-2": "D2", "D-3": "D3", "E-1": "E1", "E-2": "E2", "E-3": "E3",
 }
 
-TEST_TYPE_TO_LANGUAGE_GROUP: dict[str, str] = { # Added type hint for TEST_TYPE_TO_LANGUAGE_GROUP
+TEST_TYPE_TO_LANGUAGE_GROUP: Dict[str, str] = { # Added type hint for TEST_TYPE_TO_LANGUAGE_GROUP
     "TOEFL": "ENGLISH", "TOEFL_ITP": "ENGLISH", "TOEIC": "ENGLISH",
     "IELTS": "ENGLISH", "DUOLINGO": "ENGLISH",
     "HSK": "CHINESE",
@@ -78,7 +77,7 @@ def _cefr_to_float(level_str: str) -> float:
 class LanguageParser:
     """Parse language requirement text into structured data."""
 
-    SCORE_PATTERNS: list[tuple[str, str, Callable[[str], float]]] = [ # Added type hint
+    SCORE_PATTERNS: List[Tuple[str, str, Callable[[str], float]]] = [ # Added type hint
         (r"TOEFL\s*(?:\(iBT\)|iBT|IBT|ibt)?\s*(\d+)", "TOEFL", lambda x: float(x.replace(',', ''))),
         (r"TOEFL\s*(?:ITP|itp|PBT|pbt)\s*(\d+)", "TOEFL_ITP", lambda x: float(x.replace(',', ''))),
         (r"토플\s*(?:IBT|iBT)?\s*(\d+)", "TOEFL", lambda x: float(x.replace(',', ''))),
@@ -96,10 +95,10 @@ class LanguageParser:
         (r"TOPIK\s*(\d+)급?", "TOPIK", lambda x: float(x.replace(',', ''))),
     ]
 
-    EXCLUDE_PATTERNS: list[str] = [r"TOEIC[^가-힣]*제외", r"ITP[^가-힣]*제외", r"토익[^가-힣]*제외"] # Added type hint
-    OPTIONAL_PATTERNS: list[str] = [r"어학\s*성적?\s*없음", r"면제", r"불필요", r"N/?A"] # Added type hint
+    EXCLUDE_PATTERNS: List[str] = [r"TOEIC[^가-힣]*제외", r"ITP[^가-힣]*제외", r"토익[^가-힣]*제외"] # Added type hint
+    OPTIONAL_PATTERNS: List[str] = [r"어학\s*성적?\s*없음", r"면제", r"불필요", r"N/?A"] # Added type hint
 
-    def parse(self, text: str | None, region: str | None = None) -> ParsedLanguageRequirement:
+    def parse(self, text: Optional[str], region: Optional[str] = None) -> ParsedLanguageRequirement:
         """
         Parse language requirement text using a direct-first, code-fallback strategy.
         This ensures that scores explicitly mentioned in the text take precedence.
@@ -117,7 +116,7 @@ class LanguageParser:
             return ParsedLanguageRequirement(is_optional=True, raw_text="")
 
         result = ParsedLanguageRequirement(raw_text=text)
-        scores_map: dict[str, ParsedScoreInfo] = {}
+        scores_map: Dict[str, ParsedScoreInfo] = {}
 
         if any(re.search(p, text, re.IGNORECASE) for p in self.OPTIONAL_PATTERNS):
             result.is_optional = True
@@ -182,7 +181,7 @@ class LanguageParser:
         result.scores = list(scores_map.values())
         return result
 
-    def _match_standard_code(self, text: str, region: str | None = None) -> str | None:
+    def _match_standard_code(self, text: str, region: Optional[str] = None) -> Optional[str]:
         """Extracts a standard grade code from the text."""
         text_upper = text.upper().strip()
 
@@ -217,7 +216,7 @@ class LanguageParser:
 class GPAParser:
     """Parse GPA requirements."""
 
-    def parse(self, text: str | None) -> float | None:
+    def parse(self, text: Optional[str]) -> Optional[float]:
         """Parse GPA requirement text and return a float, assuming a 4.5 scale."""
         if text is None:
             return None
@@ -240,7 +239,7 @@ class GPAParser:
 class WebsiteURLParser:
     """Parse and clean website URL strings."""
 
-    def parse(self, text: str | None) -> str | None:
+    def parse(self, text: Optional[str]) -> Optional[str]:
         """
         Parses a string to find and clean the first URL.
         Handles various formats including those without protocols.

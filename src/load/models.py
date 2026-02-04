@@ -1,5 +1,7 @@
 """SQLAlchemy models for university exchange program data."""
 
+from typing import List, Optional
+
 from sqlalchemy import (
     Boolean,
     Float,
@@ -41,7 +43,7 @@ class LanguageRequirement(Base):
     min_score: Mapped[float] = mapped_column(
         Float, nullable=False, comment="요구되는 최소 점수"
     )
-    level_code: Mapped[str | None] = mapped_column(
+    level_code: Mapped[Optional[str]] = mapped_column(
         String(50), nullable=True, comment="레벨/등급 (예: B2, N2 등)"
     )
 
@@ -86,20 +88,20 @@ class University(Base):
         String(255), nullable=False, comment="대학교 영문 명칭"
     )
     min_gpa: Mapped[float] = mapped_column(Float, nullable=False, comment="지원을 위한 최소 GPA")
-    significant_note: Mapped[str | None] = mapped_column(
+    significant_note: Mapped[Optional[str]] = mapped_column(
         Text, nullable=True, comment="주요사항"
     )
     remark: Mapped[str] = mapped_column(Text, nullable=False, comment="기타 참고사항 (비고)")
-    available_majors: Mapped[str | None] = mapped_column(
+    available_majors: Mapped[Optional[str]] = mapped_column(
         Text, nullable=True, comment="교환학생 수강 가능한 전공 목록"
     )
-    website_url: Mapped[str | None] = mapped_column(
+    website_url: Mapped[Optional[str]] = mapped_column(
         Text, nullable=True, comment="공식 홈페이지 주소"
     )
-    thumbnail_url: Mapped[str | None] = mapped_column(
+    thumbnail_url: Mapped[Optional[str]] = mapped_column(
         Text, nullable=True, comment="학교 로고 또는 대표 이미지"
     )
-    available_semester: Mapped[str | None] = mapped_column(
+    available_semester: Mapped[Optional[str]] = mapped_column(
         String(100), nullable=True, comment="파견 가능한 학기 (예: Fall, Spring)"
     )
     is_exchange: Mapped[bool] = mapped_column(
@@ -110,7 +112,7 @@ class University(Base):
     )
 
     # Relationships
-    language_requirements: Mapped[list["LanguageRequirement"]] = relationship(
+    language_requirements: Mapped[List["LanguageRequirement"]] = relationship(
         back_populates="university",
         cascade="all, delete-orphan",
     )

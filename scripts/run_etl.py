@@ -3,6 +3,7 @@
 import argparse
 import sys
 from pathlib import Path
+from typing import Dict, List, Optional, Union, Tuple
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -20,7 +21,7 @@ def process_file(
     file_path: Path,
     loader: DatabaseLoader,
     dry_run: bool = False,
-) -> dict[str, int]:
+) -> Dict[str, int]:
     """Process a single Excel file through the ETL pipeline."""
     logger.info(f"Processing: {file_path.name}")
 
