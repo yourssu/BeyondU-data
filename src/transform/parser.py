@@ -124,10 +124,11 @@ class LanguageParser:
             return result
 
         for pattern in self.EXCLUDE_PATTERNS:
-            if "TOEIC" in pattern or "토익" in pattern:
-                result.excluded_tests.append("TOEIC")
-            if "ITP" in pattern:
-                result.excluded_tests.append("TOEFL_ITP")
+            if re.search(pattern, text, re.IGNORECASE):
+                if "TOEIC" in pattern or "토익" in pattern:
+                    result.excluded_tests.append("TOEIC")
+                if "ITP" in pattern:
+                    result.excluded_tests.append("TOEFL_ITP")
 
         # Step 1: Direct parsing first.
         # This finds all explicitly mentioned scores (e.g., "TOEFL 80", "IELTS 6.5")
