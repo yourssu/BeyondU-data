@@ -186,9 +186,9 @@ class DatabaseLoader:
                             session, university.id, parsed_req
                         )
                         stats["language_reqs"] += count
-            
+
             session.commit()
-        
+
         return stats
 
     def _get_field(self, row: pd.Series, field_name: str, default: Any = None) -> Any:
@@ -210,7 +210,7 @@ class DatabaseLoader:
         with self.SessionLocal() as session:
             stmt = select(LanguageRequirement).where(LanguageRequirement.university_id == university_id)
             return list(session.execute(stmt).scalars().all())
-    
+
     def get_all_language_requirements(self) -> list[LanguageRequirement]:
         with self.SessionLocal() as session:
             return list(session.execute(select(LanguageRequirement).order_by(LanguageRequirement.university_id, LanguageRequirement.exam_type)).scalars().all())

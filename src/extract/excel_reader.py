@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 from openpyxl import load_workbook
@@ -101,7 +101,7 @@ class ExcelReader:
         df = self._clean_dataframe(df)
         return df
 
-    def _extract_with_merged_cells(self, ws: Any, merged_ranges: list) -> list[list[Any]]:
+    def _extract_with_merged_cells(self, ws: Any, merged_ranges: list[Any]) -> list[list[Any]]:
         merged_cell_map: dict[tuple[int, int], Any] = {}
         for merged_range in merged_ranges:
             min_row, min_col = merged_range.min_row, merged_range.min_col
@@ -184,7 +184,7 @@ class ExcelReader:
         wb = load_workbook(self.file_path, read_only=True)
         names = wb.sheetnames
         wb.close()
-        return names
+        return cast(list[str], names)
 
     def extract_file_metadata(self) -> dict[str, str | None]:
         filename = self.file_path.stem

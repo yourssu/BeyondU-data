@@ -2,8 +2,7 @@
 
 import re
 from dataclasses import dataclass, field
-from typing import Any
-
+from typing import Callable, Any
 
 @dataclass
 class ParsedScoreInfo:
@@ -28,7 +27,7 @@ class ParsedLanguageRequirement:
 # 숭실대학교 공인 어학 성적 기준표 (2024년 기준)
 # ============================================================================
 
-LANGUAGE_STANDARDS = {
+LANGUAGE_STANDARDS: dict[str, Any] = { # Added type hint for LANGUAGE_STANDARDS
     "A1": {"category": "ENGLISH", "scores": {"TOEFL": 85.0, "IELTS": 6.5, "TOEIC": 900.0, "TOEFL_ITP": 600.0}},
     "A2": {"category": "ENGLISH", "scores": {"TOEFL": 80.0, "IELTS": 6.0, "TOEIC": 850.0, "TOEFL_ITP": 560.0}},
     "A3": {"category": "ENGLISH", "scores": {"TOEFL": 75.0, "IELTS": 5.5, "TOEIC": 800.0, "TOEFL_ITP": 545.0}},
@@ -52,13 +51,13 @@ LANGUAGE_STANDARDS = {
     "C2": {"category": "JAPANESE", "scores": {"JLPT": 2.0, "JPT": 600.0}},
 }
 
-LEGACY_CODE_ALIASES = {
+LEGACY_CODE_ALIASES: dict[str, str] = { # Added type hint for LEGACY_CODE_ALIASES
     "A-1": "A1", "A-2": "A2", "A-3": "A3", "A-4": "A4", "A-5": "A5",
     "B-1": "B1", "B-2": "B2", "B-3": "B3", "C-1": "C1", "C-2": "C2",
     "D-1": "D1", "D-2": "D2", "D-3": "D3", "E-1": "E1", "E-2": "E2", "E-3": "E3",
 }
 
-TEST_TYPE_TO_LANGUAGE_GROUP = {
+TEST_TYPE_TO_LANGUAGE_GROUP: dict[str, str] = { # Added type hint for TEST_TYPE_TO_LANGUAGE_GROUP
     "TOEFL": "ENGLISH", "TOEFL_ITP": "ENGLISH", "TOEIC": "ENGLISH",
     "IELTS": "ENGLISH", "DUOLINGO": "ENGLISH",
     "HSK": "CHINESE",
@@ -77,7 +76,7 @@ def _cefr_to_float(level_str: str) -> float:
 class LanguageParser:
     """Parse language requirement text into structured data."""
 
-    SCORE_PATTERNS = [
+    SCORE_PATTERNS: list[tuple[str, str, Callable[[str], float]]] = [ # Added type hint
         (r"TOEFL\s*(?:\(iBT\)|iBT|IBT|ibt)?\s*(\d+)", "TOEFL", lambda x: float(x.replace(',', ''))),
         (r"TOEFL\s*(?:ITP|itp|PBT|pbt)\s*(\d+)", "TOEFL_ITP", lambda x: float(x.replace(',', ''))),
         (r"토플\s*(?:IBT|iBT)?\s*(\d+)", "TOEFL", lambda x: float(x.replace(',', ''))),
@@ -95,8 +94,8 @@ class LanguageParser:
         (r"TOPIK\s*(\d+)급?", "TOPIK", lambda x: float(x.replace(',', ''))),
     ]
 
-    EXCLUDE_PATTERNS = [r"TOEIC[^가-힣]*제외", r"ITP[^가-힣]*제외", r"토익[^가-힣]*제외"]
-    OPTIONAL_PATTERNS = [r"어학\s*성적?\s*없음", r"면제", r"불필요", r"N/?A"]
+    EXCLUDE_PATTERNS: list[str] = [r"TOEIC[^가-힣]*제외", r"ITP[^가-힣]*제외", r"토익[^가-힣]*제외"] # Added type hint
+    OPTIONAL_PATTERNS: list[str] = [r"어학\s*성적?\s*없음", r"면제", r"불필요", r"N/?A"] # Added type hint
 
     def parse(self, text: str | None, region: str | None = None) -> ParsedLanguageRequirement:
         """
@@ -138,20 +137,22 @@ class LanguageParser:
                 try:
                     raw_score = match.group(1)
                     if exam_type in ("DELF", "ZD"):
+                        # This line is potentially problematic as `match.group(0)` might not always contain the level code directly
+                        # Re-evaluate logic if this doesn't work.
                         raw_score = match.group(0).split()[-1]
-                    
+
                     score = converter(raw_score)
                     language_group = TEST_TYPE_TO_LANGUAGE_GROUP.get(exam_type)
 
                     if score is None or language_group is None:
                         continue
-                    
+
                     # Add or override score in the map.
                     scores_map[exam_type] = ParsedScoreInfo(
                         exam_type=exam_type,
                         min_score=score,
                         level_code=raw_score if exam_type in ("DELF", "ZD") else None,
-                        language_group=language_group,
+                        language_group=language_group, # mypy should now infer language_group as str
                         source="direct",
                     )
                 except (ValueError, TypeError, IndexError):
@@ -174,14 +175,14 @@ class LanguageParser:
                         language_group=lang_group,
                         source="code",
                     )
-        
+
         result.scores = list(scores_map.values())
         return result
 
     def _match_standard_code(self, text: str, region: str | None = None) -> str | None:
         """Extracts a standard grade code from the text."""
         text_upper = text.upper().strip()
-        
+
         # Region-specific logic (Europe)
         if region and '유럽' in region:
             # English B1/B2 for Europe -> EU_B1/EU_B2
@@ -217,7 +218,7 @@ class GPAParser:
         """Parse GPA requirement text and return a float, assuming a 4.5 scale."""
         if text is None:
             return None
-        
+
         text = str(text).strip()
         if not text:
             return None
@@ -229,7 +230,7 @@ class GPAParser:
                 return float(match.group(1))
             except (ValueError, TypeError):
                 return None
-        
+
         return None
 
 
@@ -263,5 +264,5 @@ class WebsiteURLParser:
         # Ensure the URL has a protocol for consistency.
         if not url.startswith(("http://", "https://")):
             url = "http://" + url
-            
+
         return url

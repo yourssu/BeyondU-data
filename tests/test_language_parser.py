@@ -5,8 +5,6 @@ import pytest
 from src.transform.parser import (
     LANGUAGE_STANDARDS,
     LanguageParser,
-    LanguageRequirement,
-    ParsedLanguageScore,
     get_score_label,
 )
 

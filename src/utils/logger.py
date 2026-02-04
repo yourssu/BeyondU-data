@@ -2,7 +2,6 @@
 
 import logging
 import sys
-from typing import Any
 
 
 def get_logger(name: str, level: int = logging.INFO) -> logging.Logger:
