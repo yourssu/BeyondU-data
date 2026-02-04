@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, cast, Union
 
 import pandas as pd
 from openpyxl import load_workbook
@@ -47,11 +47,11 @@ class ExcelReader:
         "웹사이트": "website_url",
     }
 
-    def __init__(self, file_path: str | Path):
+    def __init__(self, file_path: Union[str, Path]):
         self.file_path = Path(file_path)
         self._workbook = None
 
-    def read(self, sheet_name: str | None = None) -> pd.DataFrame:
+    def read(self, sheet_name: Union[str, None] = None) -> pd.DataFrame:
         """
         Read Excel file and return DataFrame with merged cells resolved.
         """
@@ -118,7 +118,7 @@ class ExcelReader:
             data.append(row_data)
         return data
 
-    def _find_header_row(self, data: list[list[Any]]) -> int | None:
+    def _find_header_row(self, data: list[list[Any]]) -> Union[int, None]:
         for i, row in enumerate(data[:10]):
             row_str = " ".join(str(x) for x in row if x)
             if any(keyword in row_str for keyword in self.HEADER_KEYWORDS):
