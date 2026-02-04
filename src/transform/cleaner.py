@@ -82,7 +82,7 @@ class DataCleaner:
         if existing:
             # Remove rows where essential columns are all empty
             mask = self.df[existing].notna().any(axis=1)
-            self.df = self.df[mask]
+            self.df = self.df[mask].copy()
 
             # Remove summary rows
             if "name_kr" in self.df.columns:
@@ -90,6 +90,6 @@ class DataCleaner:
                     ~self.df["name_kr"]
                     .astype(str)
                     .str.contains("합계|소계|총계|nan", case=False, na=False)
-                ]
+                ].copy()
 
         self.df = self.df.reset_index(drop=True)

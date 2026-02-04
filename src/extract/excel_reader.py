@@ -145,7 +145,7 @@ class ExcelReader:
         return merged
 
     def _normalize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
-        new_columns = []
+        new_columns: List[str] = []
         for col in df.columns:
             if col is None or pd.isna(col):
                 new_columns.append(f"unnamed_{len(new_columns)}")
@@ -158,10 +158,10 @@ class ExcelReader:
         df.columns = pd.Index(new_columns)
         cols = pd.Series(df.columns)
         if cols.duplicated().any():
-            for dup_name in cols[cols.duplicated()].unique():
+            for dup_name in cols[cols.duplicated()].astype(str).unique():
                 dup_cols = df.columns[cols == dup_name]
                 df[dup_cols[0]] = df[dup_cols].apply(lambda row: ' '.join(row.dropna().astype(str)), axis=1)
-                df = df.drop(columns=dup_cols[1:])
+                df = df.drop(columns=dup_cols[1:]).copy()
         return df
 
     def _clean_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:

@@ -13,7 +13,6 @@ select = ["E", "F", "I", "N", "W", "UP"]
 ignore = ["E501"]
 
 [tool.mypy]
-python_version = "3.8"
 strict = true
 ignore_missing_imports = true
 
