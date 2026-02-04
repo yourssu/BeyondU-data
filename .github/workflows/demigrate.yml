@@ -1,0 +1,54 @@
+name: Excel to RDS Demigration
+
+on:
+  workflow_dispatch:
+
+jobs:
+  demigrate:
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2
+        env:
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          HOST: ${{ secrets.EC2_STG_HOST }}
+          DB_URL: ${{ secrets.DB_URL }}
+        run: |
+          # Setup SSH
+          mkdir -p ~/.ssh
+          ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
+          echo "$SSH_KEY" > key.pem
+          chmod 600 key.pem
+
+          # Create .env file
+          echo "DATABASE_URL=$DB_URL" > .env
+
+          # Define project path on EC2
+          PROJECT_PATH="/home/ubuntu/BeyondU-Data"
+
+          # SCP .env file to EC2
+          scp -i key.pem .env ubuntu@$HOST:$PROJECT_PATH/.env
+
+          # SSH to EC2 and run demigration script
+          ssh -i key.pem ubuntu@$HOST "
+            # Navigate to the project directory
+            cd $PROJECT_PATH
+
+            # Pull the latest changes
+            git pull
+
+            # Set up python virtual environment and install dependencies
+            python3 -m venv venv
+            source venv/bin/activate
+            pip install -r requirements.txt
+
+            # Run the ETL script with --drop-db to clear all data
+            python scripts/run_etl.py --drop-db
+          "
