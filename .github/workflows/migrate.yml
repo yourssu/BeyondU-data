@@ -2,7 +2,12 @@ name: Excel to RDS Migration
 
 on:
   workflow_dispatch:
-
+    inputs:
+      confirm_migration:
+        description: 'Confirm database migration operation. This will load data into the database.'
+        required: true
+        type: boolean
+        default: false
 jobs:
   migrate:
     runs-on: ubuntu-latest
@@ -10,11 +15,9 @@ jobs:
     permissions:
       id-token: write
       contents: read
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Deploy to EC2
         env:
           SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
@@ -38,19 +41,29 @@ jobs:
 
           # SSH to EC2 and run migration script
           ssh -i key.pem ubuntu@$HOST "
-            # Navigate to the project directory
-            cd $PROJECT_PATH
 
-            # Pull the latest changes
-            git pull
+          # Navigate to the project directory
+          cd $PROJECT_PATH
 
-            # Set up python virtual environment and install dependencies
-            python3 -m venv venv
-            source venv/bin/activate
-            pip install -r requirements.txt
+          # Pull the latest changes
+          git pull
 
-            # Run the ETL script
-            # This example processes only the latest file from the 'data/raw' directory and initializes the DB.
-            # You can customize the arguments as needed.
-            python scripts/run_etl.py --input data/raw --latest-only --init-db
+
+          # Set up python virtual environment and install dependencies
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+
+
+          if [ "${{ github.event.inputs.confirm_migration }}" != "true" ]; then
+            echo "Database migration not confirmed. Exiting."
+            exit 1
+          fi
+
+          # Run the ETL script
+          # This example processes only the latest file from the 'data/raw' directory and initializes the DB.
+          # You can customize the arguments as needed.
+          python scripts/run_etl.py --input data/raw --latest-only --init-db
+
           "

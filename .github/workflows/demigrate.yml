@@ -2,6 +2,12 @@ name: Excel to RDS Demigration
 
 on:
   workflow_dispatch:
+    inputs:
+      confirm_drop_db:
+        description: 'Confirm database drop operation. This will delete all ETL-related data.'
+        required: true
+        type: boolean
+        default: false
 
 jobs:
   demigrate:
@@ -48,6 +54,11 @@ jobs:
             python3 -m venv venv
             source venv/bin/activate
             pip install -r requirements.txt
+
+            if [ "${{ github.event.inputs.confirm_drop_db }}" != "true" ]; then
+              echo "Database drop not confirmed. Exiting."
+              exit 1
+            fi
 
             # Run the ETL script with --drop-db to clear all data
             python scripts/run_etl.py --drop-db
