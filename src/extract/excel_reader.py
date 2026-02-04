@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from typing import Any, cast, List, Dict, Optional, Union, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import pandas as pd
 from openpyxl import load_workbook

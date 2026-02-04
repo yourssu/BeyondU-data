@@ -2,7 +2,7 @@
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, List, Optional, Union, Dict, Tuple, Callable
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 
 @dataclass

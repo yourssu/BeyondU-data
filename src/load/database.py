@@ -1,6 +1,6 @@
 """Database operations for loading processed data."""
 
-from typing import Any, List, Optional, Union, Dict, Tuple
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from sqlalchemy import create_engine, delete, select
