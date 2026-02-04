@@ -130,8 +130,7 @@ jobs:
           # RUN ETL
           # --------------------
           echo "🔥 Running ETL"
-          DATABASE_URL="$FULL_DATABASE_URL" \
-          python scripts/run_etl.py --input data/raw --latest-only --init-db
-
+            DATABASE_URL="$FULL_DATABASE_URL" \
+            python scripts/run_etl.py --input data/raw --init-db
           echo "✅ Migration completed"
           EOF
