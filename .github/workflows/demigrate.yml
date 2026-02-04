@@ -44,9 +44,11 @@ jobs:
           # Define project path on EC2
           PROJECT_PATH="/home/ubuntu/BeyondU-Data"
 
-          # Construct the full DATABASE_URL for PostgreSQL
-          # Assuming default PostgreSQL port 5432 and a database named 'beyondudb' on RDS
-          FULL_DATABASE_URL="postgresql+psycopg2://${DB_USERNAME}:${DB_PASSWORD}@${DB_URL}:5432/beyondudb"
+                    # Construct the full DATABASE_URL for MySQL
+
+                    # Assuming default MySQL port 3306 and a database named 'mysql' (or your application DB) on RDS
+
+                    FULL_DATABASE_URL="mysql+mysqlconnector://${DB_USERNAME}:${DB_PASSWORD}@${DB_URL}:3306/mysql"
 
           # SSH to EC2 and run demigration script
           ssh -i key.pem ubuntu@$HOST "
