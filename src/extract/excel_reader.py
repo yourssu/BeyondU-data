@@ -102,7 +102,7 @@ class ExcelReader:
         return df
 
     def _extract_with_merged_cells(self, ws: Any, merged_ranges: List[Any]) -> List[List[Any]]:
-        merged_cell_map: dict[tuple[int, int], Any] = {}
+        merged_cell_map: Dict[Tuple[int, int], Any] = {}
         for merged_range in merged_ranges:
             min_row, min_col = merged_range.min_row, merged_range.min_col
             value = ws.cell(row=min_row, column=min_col).value
@@ -186,7 +186,7 @@ class ExcelReader:
         wb.close()
         return cast(List[str], names)
 
-    def extract_file_metadata(self) -> dict[str, str | None]:
+    def extract_file_metadata(self) -> Dict[str, Optional[str]]:
         filename = self.file_path.stem
         semester_match = re.search(r"(\d{4})-?(\d)", filename)
         semester = f"{semester_match.groups()[0]}-{semester_match.groups()[1]}" if semester_match else None

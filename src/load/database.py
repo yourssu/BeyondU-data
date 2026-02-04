@@ -55,7 +55,7 @@ class DatabaseLoader:
         "칠레": "남미",
     }
 
-    def __init__(self, database_url: str | None = None):
+    def __init__(self, database_url: Optional[str] = None):
         self.database_url = database_url or settings.database_url
         self.engine = create_engine(self.database_url)
         self.SessionLocal = sessionmaker(bind=self.engine)
@@ -63,7 +63,7 @@ class DatabaseLoader:
         self._gpa_parser = GPAParser()
         self._website_url_parser = WebsiteURLParser()
 
-    def get_region_from_nation(self, nation: str) -> str | None:
+    def get_region_from_nation(self, nation: str) -> Optional[str]:
         """Get region from nation using the mapping."""
         return self.COUNTRY_TO_REGION_MAP.get(nation)
 
@@ -96,7 +96,7 @@ class DatabaseLoader:
             session.add(record)
         return len(parsed_req.scores)
 
-    def load_universities_dataframe(self, df: pd.DataFrame) -> dict[str, int]:
+    def load_universities_dataframe(self, df: pd.DataFrame) -> Dict[str, int]:
         """Load a cleaned DataFrame into the database using an upsert strategy."""
         stats = {"inserted": 0, "updated": 0, "skipped": 0, "language_reqs": 0}
         with self.SessionLocal() as session:
