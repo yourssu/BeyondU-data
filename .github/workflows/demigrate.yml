@@ -28,11 +28,13 @@ jobs:
           DB_URL: ${{ secrets.DB_URL }} # DB_URL secret now holds the DB host
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           # Setup SSH
-          mkdir -p ~/.ssh
-          ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
-          echo "$SSH_KEY" > key.pem
+          mkdir -p ~/.ssh && \
+          ssh-keyscan -H $HOST >> ~/.ssh/known_hosts && \
+          echo "$SSH_KEY" > key.pem && \
           chmod 600 key.pem
 
           # Validate DB secrets
@@ -44,16 +46,44 @@ jobs:
           # Define project path on EC2
           PROJECT_PATH="/home/ubuntu/BeyondU-Data"
 
-                              # Construct the full DATABASE_URL for MySQL
-
-                              # Assuming default MySQL port 3306 and a database named 'beyondu' (or your application DB) on RDS
-
-                              FULL_DATABASE_URL="mysql+mysqlconnector://${DB_USERNAME}:${DB_PASSWORD}@${DB_URL}:3306/beyondu"
+          # Construct the full DATABASE_URL for MySQL
+          FULL_DATABASE_URL="mysql+mysqlconnector://${DB_USERNAME}:${DB_PASSWORD}@${DB_URL}:3306/beyondu"
 
           # SSH to EC2 and run demigration script
           ssh -i key.pem ubuntu@$HOST "
-            # ... (inside SSH block) ...
+            # Check if project directory exists, if not clone it, then navigate and pull
+            if [ ! -d \"$PROJECT_PATH\" ]; then
+              echo \"Cloning repository to $PROJECT_PATH\" && \
+              git clone https://github.com/${{ github.repository }}.git \"$PROJECT_PATH\"
+            fi && \
+            cd \"$PROJECT_PATH\" && \
+            git fetch origin && \
+            git checkout \"${{ github.ref_name }}\" && \
+            git reset --hard \"origin/${{ github.ref_name }}\" && \
+            git clean -fdx # Clean up untracked files and directories
 
-            # Run the ETL script with --drop-db to clear all data, passing DATABASE_URL as environment variable
+            # --- Start of S3 Download Logic ---
+            sudo apt-get update && sudo apt-get install -y awscli && \
+            export AWS_ACCESS_KEY_ID=\"${{ env.AWS_ACCESS_KEY_ID }}\" && \
+            export AWS_SECRET_ACCESS_KEY=\"${{ env.AWS_SECRET_ACCESS_KEY }}\" && \
+            export AWS_DEFAULT_REGION=\"ap-northeast-2\" && \
+            mkdir -p \"$PROJECT_PATH/data/raw\" && \
+            echo \"Downloading raw data from S3://beyondu-raw-data/raw/ to $PROJECT_PATH/data/raw\" && \
+            aws s3 sync s3://beyondu-raw-data/raw/ \"$PROJECT_PATH/data/raw\" && \
+            if [ $? -ne 0 ]; then
+              echo \"Error: AWS S3 sync failed. Ensure bucket exists and credentials are correct.\" && exit 1
+            fi && \
+            echo \"S3 download complete. Listing files in "$PROJECT_PATH/data/raw":\" && \
+            ls -la \"$PROJECT_PATH/data/raw\"
+            # --- End of S3 Download Logic ---
+
+            sudo apt-get update && sudo apt-get install -y python3-venv && \
+            python3 -m venv venv && \
+            source venv/bin/activate && \
+            pip install -r requirements.txt
+
+            if [ \"${{ github.event.inputs.confirm_drop_db }}\" != \"true\" ]; then
+              echo \"Database drop not confirmed. Exiting.\" && exit 1
+            fi && \
             DATABASE_URL=\"$FULL_DATABASE_URL\" python scripts/run_etl.py --drop-db
           "

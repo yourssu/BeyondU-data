@@ -123,6 +123,8 @@ def main() -> None:
         files = [files[-1]]
         logger.info(f"Processing only the latest file: {files[0].name}")
 
+    logger.info(f"Files to process: {[f.name for f in files]}")
+
     # Process files
     total_stats = {"inserted": 0, "updated": 0, "skipped": 0}
 
