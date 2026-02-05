@@ -13,6 +13,9 @@ env/
 CLAUDE.md
 GEMINI.md
 
+# claude
+/.claude
+
 # IDE
 .idea/
 .vscode/
