@@ -160,10 +160,15 @@ class DatabaseLoader:
                                         self._get_field(row, "website_url")                    ),
                     "is_exchange": "교환" in program_type_str,
                     "is_visit": "방문" in program_type_str,
-                    "available_semester": self._get_field(row, "available_semester"),
-                    "has_review": has_review,
-                    "review_year": review_year,
+                    "available_semester": self._get_field(row, "available_semester"), # 이 부분은 더 이상 모델에 없음
+
                 }
+
+                # 모델에서 제거된 컬럼이 data에 남아있을 경우 제거
+                if "available_semester" in data:
+                    del data["available_semester"]
+                if "thumbnail_url" in data: # 혹시 모를 경우를 대비하여 추가
+                    del data["thumbnail_url"]
 
                 composite_key = (name_eng, nation)
                 university = existing_map.get(composite_key)

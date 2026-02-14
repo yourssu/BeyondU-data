@@ -5,6 +5,7 @@ numpy>=1.24.0
 
 # Database
 mysql-connector-python>=8.0.0
+psycopg2-binary>=2.9.0 # PostgreSQL driver
 sqlalchemy>=2.0.0
 alembic>=1.12.0
 
