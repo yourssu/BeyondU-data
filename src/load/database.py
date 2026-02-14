@@ -141,7 +141,7 @@ class DatabaseLoader:
                         region = mapped_region
 
                 has_review, review_year = self._review_parser.parse(self._get_field(row, "review_raw"))
-                
+
                 # Parse exclusions from significant_note
                 sig_note = self._get_field(row, "significant_note")
                 excluded_exams = self._language_parser.parse_exclusions(sig_note)

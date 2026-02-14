@@ -1,6 +1,5 @@
-
-import unittest
 import sys
+import unittest
 from pathlib import Path
 
 # Add project root to sys.path
@@ -8,7 +7,8 @@ current_dir = Path(__file__).resolve().parent
 project_root = current_dir.parent
 sys.path.insert(0, str(project_root))
 
-from src.transform.parser import LanguageParser
+from src.transform.parser import LanguageParser  # noqa: E402
+
 
 class TestExclusionParsing(unittest.TestCase):
     def setUp(self):
@@ -73,7 +73,7 @@ class TestExclusionParsing(unittest.TestCase):
         # So "TOEFL Home Edition 제외" might match "TOEFL" if my logic is loose, or nothing if strict.
         # Let's see what happens.
         note = "TOEFL Home Edition 제외"
-        result = self.parser.parse_exclusions(note)
+        self.parser.parse_exclusions(note)
         # If it picks up TOEFL, that might be wrong if Home Edition is a specific Type.
         # But if the user says "TOEFL Home Ed 제외", they mean TOEFL Home Ed is invalid.
         # If we optimize for "known exams", "TOEFL" is known.

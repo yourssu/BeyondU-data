@@ -184,7 +184,7 @@ class LanguageParser:
     def parse_exclusions(self, note: Optional[str]) -> List[str]:
         """
         Parse significant_note to find excluded exams.
-        
+
         Patterns handled:
         - "ITP 제외"
         - "TOEIC, ITP 제외" (comma)
@@ -197,28 +197,28 @@ class LanguageParser:
 
         note = str(note)
         excluded_exams = set()
-        
+
         # Normalize: Remove logic like "단, ..." which might contradict (though "제외" usually takes precedence)
         # But complex sentences like "TOEIC 제외 단, ... 가능" are tricky.
         # We focus on the "제외" or "불가" keyword and the words immediately preceding it.
 
         # 1. Broad pattern: (Words) + "제외" or "불가"
         # We capture a group of words that look like exam names before "제외"/"불가"
-        # \s*[\n,]* handles lists. 
+        # \s*[\n,]* handles lists.
         # But precise matching is hard. Let's look for specific patterns.
-        
+
         # Exams we care about (normalized upper case)
-        KNOWN_EXAMS = set(TEST_TYPE_TO_LANGUAGE_GROUP.keys())
+        known_exams = set(TEST_TYPE_TO_LANGUAGE_GROUP.keys())
         # Add some aliases
-        KNOWN_EXAMS.update(["TOEFL ITP", "TOEFL IBT", "IELTS", "TOEIC"])
+        known_exams.update(["TOEFL ITP", "TOEFL IBT", "IELTS", "TOEIC"])
 
         # Strategy: Find "제외" or "불가" and look backwards for exam names
         # OR look for specific exam patterns + "제외"/"불가"
-        
+
         # Combined regex approach:
         # Look for phrases like "TOEIC, ITP 제외"
         # Pattern: (([A-Za-z]+[A-Za-z0-9_\s]*)(?:[,/]\s*[A-Za-z]+[A-Za-z0-9_\s]*)*)\s*(?:제외|불가)
-        
+
         # Simplification: Split by lines or major separators, then check each chunk.
         
         # Let's try the user's suggested simple pattern first and refine.
@@ -234,39 +234,39 @@ class LanguageParser:
         note_norm = note_norm.replace("TOEFL PBT", "TOEFL_ITP")
         note_norm = note_norm.replace("TOEFL IBT", "TOEFL")
         
-        # Use the normalized note for extraction (but be careful about indices if we mapped back to original note, 
+        # Use the normalized note for extraction (but be careful about indices if we mapped back to original note,
         # but here we just need the tokens)
-        
+
         targets = ["제외", "불가"]
-        
+
         for target in targets:
             # Find all indices of target in NORMALIZED note
             for match in re.finditer(target, note_norm):
                 # Look at the text preceding the match (up to, say, 20-30 chars or previous newline/punctuation)
                 start = max(0, match.start() - 50)
                 prefix = note_norm[start:match.start()]
-                
+
                 # Try to extract exam names from the trailing part of prefix
                 # We tokenize the prefix by common separators
                 tokens = re.split(r'[,/\s\(\)\[\]]+', prefix)
                 
                 # Check tokens in reverse order (closest to "제외" first)
                 # Valid exam names usually contain English letters.
-                
+
                 found_in_this_segment = []
                 for token in reversed(tokens):
                     clean_token = token.strip() # Already upper from note_norm
                     if not clean_token:
                         continue
-                        
+
                     # Check if it looks like an exam name
                     is_exam = False
-                    
+
                     # Direct match with known exams
-                    if clean_token in KNOWN_EXAMS:
+                    if clean_token in known_exams:
                         is_exam = True
                     # Common variations
-                    elif "ITP" in clean_token: 
+                    elif "ITP" in clean_token:
                         found_in_this_segment.append("TOEFL_ITP") # Normalize ITP -> TOEFL_ITP
                         continue
                     elif "IBT" in clean_token:
@@ -281,10 +281,10 @@ class LanguageParser:
                         # Heuristic: If it contains Korean, stop.
                         if re.search(r'[가-힣]', token):
                             break
-                        # If it's a very long word or irrelevant, maybe stop? 
+                        # If it's a very long word or irrelevant, maybe stop?
                         # For now, simplistic check: if not in KNOWN and not similar, stop.
                         pass
-                
+
                 excluded_exams.update(found_in_this_segment)
 
         return list(excluded_exams)
