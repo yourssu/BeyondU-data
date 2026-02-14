@@ -87,7 +87,7 @@ class ExcelReader:
         if header_row_idx is not None:
             headers = data[header_row_idx]
             df_data = data[header_row_idx + 1 :]
-            
+
             # 1. 다중 헤더 처리 (기존 로직)
             if header_row_idx + 1 < len(data):
                 next_row = data[header_row_idx + 1]
@@ -105,7 +105,7 @@ class ExcelReader:
                     # 부족한 헤더 개수만큼 'unnamed_n'이라는 임시 이름을 붙여줌
                     # 나중에 _normalize_columns에서 걸러지거나 무시됨
                     headers = list(headers) + [f"unnamed_{i}" for i in range(current_header_len, max_cols)]
-                
+
                 # 모든 데이터 행의 길이를 헤더 길이에 맞춤 (짧은 행은 None으로 채움)
                 df_data = [list(row) + [None] * (len(headers) - len(row)) for row in df_data]
 
@@ -138,16 +138,15 @@ class ExcelReader:
         data: List[List[Any]] = []
         for row_idx, row in enumerate(ws.iter_rows(), start=1):
             # Only read up to a reasonable number of columns to avoid reading infinite empty columns
-            row_data: List[Any] = []
             max_col_with_data = 0
             temp_row_data = []
-            
+
             for col_idx, cell in enumerate(row, start=1):
                 value = merged_cell_map.get((row_idx, col_idx)) if isinstance(cell, MergedCell) else cell.value
                 temp_row_data.append(value)
                 if value is not None:
                     max_col_with_data = col_idx
-            
+
             # Trim trailing empty cells but keep internal Nones
             data.append(temp_row_data[:max_col_with_data] if max_col_with_data > 0 else [])
         return data
@@ -167,11 +166,11 @@ class ExcelReader:
         """
         keywords = ["최소", "학점", "어학", "성적", "특이사항", "유의사항", "참고", "사항", "비고"]
         row_str = " ".join(str(x) for x in row if x)
-        
+
         # Check for presence of any keywords
         if any(kw in row_str for kw in keywords):
             return True
-            
+
         return False
 
     def _merge_headers(self, header1: List[Any], header2: List[Any]) -> List[Any]:

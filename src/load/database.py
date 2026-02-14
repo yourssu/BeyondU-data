@@ -11,8 +11,8 @@ from src.transform.parser import (
     GPAParser,
     LanguageParser,
     ParsedLanguageRequirement,
-    WebsiteURLParser,
     ReviewParser,
+    WebsiteURLParser,
 )
 
 from .models import Base, LanguageRequirement, University
