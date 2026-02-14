@@ -2,11 +2,10 @@
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import List, Union
 
 import pandas as pd
 from openpyxl import load_workbook
-from openpyxl.cell.cell import MergedCell
 
 from src.config import settings
 
@@ -21,7 +20,6 @@ class ExcelReader:
     COLUMN_MAPPING = {
         # Program type
         "프로그램 구분": "program_type",
-        "프로그램 구분": "program_type", # 개행문자 제거 후
         "구분": "program_type",
         # Institution
         "기관": "institution",
@@ -100,12 +98,13 @@ class ExcelReader:
                     headers = self._merge_headers(headers, next_row)
                     df_data = data[header_row_idx + 2 :]
 
-            # 2. [추가] 헤더와 데이터 컬럼 개수 동기화 로직
-            if df_data:
-                # 실제 데이터 행들 중 가장 긴 행의 길이를 찾음
-                max_cols = max(len(row) for row in df_data)
-# ._normalize_columns 함수 수정
-# ...
+
+            df = pd.DataFrame(df_data, columns=headers)
+            df = self._normalize_columns(df)
+            df = self._clean_dataframe(df)
+            return df
+        else:
+            return pd.DataFrame()
 
     def _normalize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         new_columns: List[str] = []
