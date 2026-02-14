@@ -220,12 +220,11 @@ class LanguageParser:
         # Pattern: (([A-Za-z]+[A-Za-z0-9_\s]*)(?:[,/]\s*[A-Za-z]+[A-Za-z0-9_\s]*)*)\s*(?:제외|불가)
 
         # Simplification: Split by lines or major separators, then check each chunk.
-        
+
         # Let's try the user's suggested simple pattern first and refine.
         # pattern = r"([A-Za-z\s,/]+)\s*제외"
-        
+
         # We also need to handle Korean text mixed in.
-        
         # Pre-process: Normalize multi-word exams to avoid splitting them
         # "TOEFL ITP" -> "TOEFL_ITP"
         # "TOEFL IBT" -> "TOEFL"
@@ -233,7 +232,7 @@ class LanguageParser:
         note_norm = note_norm.replace("TOEFL ITP", "TOEFL_ITP")
         note_norm = note_norm.replace("TOEFL PBT", "TOEFL_ITP")
         note_norm = note_norm.replace("TOEFL IBT", "TOEFL")
-        
+
         # Use the normalized note for extraction (but be careful about indices if we mapped back to original note,
         # but here we just need the tokens)
 
@@ -249,7 +248,7 @@ class LanguageParser:
                 # Try to extract exam names from the trailing part of prefix
                 # We tokenize the prefix by common separators
                 tokens = re.split(r'[,/\s\(\)\[\]]+', prefix)
-                
+
                 # Check tokens in reverse order (closest to "제외" first)
                 # Valid exam names usually contain English letters.
 
@@ -272,7 +271,7 @@ class LanguageParser:
                     elif "IBT" in clean_token:
                         found_in_this_segment.append("TOEFL")
                         continue
-                        
+
                     if is_exam:
                         found_in_this_segment.append(clean_token)
                     else:
