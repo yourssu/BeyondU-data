@@ -268,3 +268,33 @@ class WebsiteURLParser:
             url = "http://" + url
 
         return url
+        
+class ReviewParser:
+    """Parse exchange student review availability and year."""
+    
+    def parse(self, text: Optional[str]) -> Tuple[bool, Optional[str]]:
+        """
+        Parse review text to extract availability and year.
+        
+        Examples:
+            "Y(2018)" -> (True, "2018")
+            "Y(2013-2019)" -> (True, "2013-2019")
+            "X" -> (False, None)
+            None -> (False, None)
+        """
+        if not text or not str(text).strip():
+            return False, None
+            
+        text_str = str(text).strip()
+        
+        # Check if it starts with Y (case-insensitive)
+        if not text_str.upper().startswith("Y"):
+            return False, None
+            
+        # Extract year inside parentheses
+        match = re.search(r"\((.*?)\)", text_str)
+        if match:
+            return True, match.group(1).strip()
+            
+        # If Y but no parentheses, just return True with no year
+        return True, None

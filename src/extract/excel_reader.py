@@ -38,13 +38,15 @@ class ExcelReader:
         # Language
         "어학성적": "language_requirement",
         # Notes and Info
-        "특이사항": "remark",
+        "특이사항": "significant_note",
         "유의사항": "remark",
-        "참고사항": "remark",
-        "비고": "remark",
+        "참고사항": "remark_ref",  # Distinguish from remark if needed, or map to same
         "수학가능학과/영어강의목록 등": "available_majors",
+        "수학가능학과": "available_majors",
         "웹사이트 ": "website_url",
         "웹사이트": "website_url",
+        # Review
+        "교환학생수기 여부": "review_raw"
     }
 
     def __init__(self, file_path: Union[str, Path]):
@@ -85,14 +87,38 @@ class ExcelReader:
         if header_row_idx is not None:
             headers = data[header_row_idx]
             df_data = data[header_row_idx + 1 :]
+            
+            # 1. 다중 헤더 처리 (기존 로직)
             if header_row_idx + 1 < len(data):
                 next_row = data[header_row_idx + 1]
                 if self._is_header_continuation(next_row):
                     headers = self._merge_headers(headers, next_row)
                     df_data = data[header_row_idx + 2 :]
+
+            # 2. [추가] 헤더와 데이터 컬럼 개수 동기화 로직
+            if df_data:
+                # 실제 데이터 행들 중 가장 긴 행의 길이를 찾음
+                max_cols = max(len(row) for row in df_data)
+                current_header_len = len(headers)
+
+                if current_header_len < max_cols:
+                    # 부족한 헤더 개수만큼 'unnamed_n'이라는 임시 이름을 붙여줌
+                    # 나중에 _normalize_columns에서 걸러지거나 무시됨
+                    headers = list(headers) + [f"unnamed_{i}" for i in range(current_header_len, max_cols)]
+                
+                # 모든 데이터 행의 길이를 헤더 길이에 맞춤 (짧은 행은 None으로 채움)
+                df_data = [list(row) + [None] * (len(headers) - len(row)) for row in df_data]
+
+            # 3. 데이터프레임 생성 (이제 개수가 맞아서 에러 안 남)
             df = pd.DataFrame(df_data, columns=headers)
         else:
-            df = pd.DataFrame(data[1:], columns=data[0])
+            # 헤더를 못 찾은 경우에 대한 방어 로직도 동일하게 적용 가능
+            if data:
+                max_cols = max(len(row) for row in data)
+                headers = [f"col_{i}" for i in range(max_cols)]
+                df = pd.DataFrame(data, columns=headers)
+            else:
+                df = pd.DataFrame()
 
         df = self._normalize_columns(df)
         metadata = self.extract_file_metadata()
@@ -111,11 +137,19 @@ class ExcelReader:
                     merged_cell_map[(row, col)] = value
         data: List[List[Any]] = []
         for row_idx, row in enumerate(ws.iter_rows(), start=1):
+            # Only read up to a reasonable number of columns to avoid reading infinite empty columns
             row_data: List[Any] = []
+            max_col_with_data = 0
+            temp_row_data = []
+            
             for col_idx, cell in enumerate(row, start=1):
                 value = merged_cell_map.get((row_idx, col_idx)) if isinstance(cell, MergedCell) else cell.value
-                row_data.append(value)
-            data.append(row_data)
+                temp_row_data.append(value)
+                if value is not None:
+                    max_col_with_data = col_idx
+            
+            # Trim trailing empty cells but keep internal Nones
+            data.append(temp_row_data[:max_col_with_data] if max_col_with_data > 0 else [])
         return data
 
     def _find_header_row(self, data: List[List[Any]]) -> Union[int, None]:
@@ -126,11 +160,18 @@ class ExcelReader:
         return None
 
     def _is_header_continuation(self, row: List[Any]) -> bool:
-        non_empty = [x for x in row if x and str(x).strip()]
-        if len(non_empty) <= 5:
-            for val in non_empty:
-                if any(kw in str(val) for kw in ["최소 학점", "어학성적", "특이사항"]):
-                    return True
+        """
+        Check if the row is a continuation of the header (second header row).
+        It is considered a continuation if it contains known header keywords,
+        regardless of the number of empty cells.
+        """
+        keywords = ["최소", "학점", "어학", "성적", "특이사항", "유의사항", "참고", "사항", "비고"]
+        row_str = " ".join(str(x) for x in row if x)
+        
+        # Check for presence of any keywords
+        if any(kw in row_str for kw in keywords):
+            return True
+            
         return False
 
     def _merge_headers(self, header1: List[Any], header2: List[Any]) -> List[Any]:

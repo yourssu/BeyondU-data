@@ -12,6 +12,7 @@ from src.transform.parser import (
     LanguageParser,
     ParsedLanguageRequirement,
     WebsiteURLParser,
+    ReviewParser,
 )
 
 from .models import Base, LanguageRequirement, University
@@ -65,6 +66,7 @@ class DatabaseLoader:
         self._language_parser = LanguageParser()
         self._gpa_parser = GPAParser()
         self._website_url_parser = WebsiteURLParser()
+        self._review_parser = ReviewParser()
 
     def get_region_from_nation(self, nation: str) -> Optional[str]:
         """Get region from nation using the mapping."""
@@ -133,6 +135,8 @@ class DatabaseLoader:
                     if mapped_region:
                         region = mapped_region
 
+                has_review, review_year = self._review_parser.parse(self._get_field(row, "review_raw"))
+
                 data = {
                     "semester": new_semester_from_file,
                     "region": region,
@@ -140,13 +144,16 @@ class DatabaseLoader:
                                     "name_kor": name_kor,
                                     "name_eng": name_eng,
                                     "min_gpa": self._gpa_parser.parse(self._get_field(row, "min_gpa")) or 0.0,
-                                    "remark": self._get_field(row, "remark", ""),
+                                    "significant_note": self._get_field(row, "significant_note"),
+                                    "remark": "\n".join(filter(None, [self._get_field(row, "remark"), self._get_field(row, "remark_ref")])),
                                     "available_majors": self._get_field(row, "available_majors"),
                                     "website_url": self._website_url_parser.parse(
                                         self._get_field(row, "website_url")                    ),
                     "is_exchange": "교환" in program_type_str,
                     "is_visit": "방문" in program_type_str,
                     "available_semester": self._get_field(row, "available_semester"),
+                    "has_review": has_review,
+                    "review_year": review_year,
                 }
 
                 composite_key = (name_eng, nation)

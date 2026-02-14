@@ -110,6 +110,12 @@ class University(Base):
     is_visit: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False, comment="방문학생 파견 가능 여부"
     )
+    has_review: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, comment="교환학생 수기 존재 여부"
+    )
+    review_year: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True, comment="수기 연도 (예: 2018, 2013-2019)"
+    )
 
     # Relationships
     language_requirements: Mapped[List["LanguageRequirement"]] = relationship(
