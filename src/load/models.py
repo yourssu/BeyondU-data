@@ -46,6 +46,9 @@ class LanguageRequirement(Base):
     level_code: Mapped[Optional[str]] = mapped_column(
         String(50), nullable=True, comment="레벨/등급 (예: B2, N2 등)"
     )
+    is_available: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, comment="해당 시험 인정 여부"
+    )
 
     # Relationships
     university: Mapped["University"] = relationship(

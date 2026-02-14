@@ -85,6 +85,7 @@ class DatabaseLoader:
         session: Session,
         university_id: int,
         parsed_req: ParsedLanguageRequirement,
+        excluded_exams_from_note: List[str],
     ) -> int:
         """Load parsed language requirements into the database."""
         session.execute(
@@ -97,6 +98,10 @@ class DatabaseLoader:
                 min_score=score_info.min_score,
                 level_code=score_info.level_code,
                 language_group=score_info.language_group,
+                is_available=not (
+                    score_info.exam_type in parsed_req.excluded_tests
+                    or score_info.exam_type in excluded_exams_from_note
+                ),
             )
             session.add(record)
         return len(parsed_req.scores)
@@ -136,6 +141,10 @@ class DatabaseLoader:
                         region = mapped_region
 
                 has_review, review_year = self._review_parser.parse(self._get_field(row, "review_raw"))
+                
+                # Parse exclusions from significant_note
+                sig_note = self._get_field(row, "significant_note")
+                excluded_exams = self._language_parser.parse_exclusions(sig_note)
 
                 data = {
                     "semester": new_semester_from_file,
@@ -193,7 +202,7 @@ class DatabaseLoader:
                     )
                     if not parsed_req.is_optional and university.id:
                         count = self._load_language_requirements(
-                            session, university.id, parsed_req
+                            session, university.id, parsed_req, excluded_exams
                         )
                         stats["language_reqs"] += count
 
