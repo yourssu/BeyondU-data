@@ -158,9 +158,12 @@ class DatabaseLoader:
                                     "remark": "\n".join(filter(None, [self._get_field(row, "remark"), self._get_field(row, "remark_ref")])),
                                     "available_majors": self._get_field(row, "available_majors"),
                                     "website_url": self._website_url_parser.parse(
-                                        self._get_field(row, "website_url")                    ),
+                        self._get_field(row, "website_url")
+                    ),
                     "is_exchange": "교환" in program_type_str,
                     "is_visit": "방문" in program_type_str,
+                    "has_review": has_review,
+                    "review_year": review_year,
                     "available_semester": self._get_field(row, "available_semester"), # 이 부분은 더 이상 모델에 없음
 
                 }
