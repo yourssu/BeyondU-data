@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     # AWS
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
-    aws_s3_bucket: str = "beyondu-raw-data"
+    aws_s3_bucket: str = "beyondu-data"
     aws_region: str = "ap-northeast-2"
 
     # Paths

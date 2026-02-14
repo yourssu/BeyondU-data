@@ -1,0 +1,135 @@
+name: Cloud - Full Database Reset & Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_reset:
+        description: '⚠️ WARNING: This will DROP ALL TABLES and recreate them. All existing data will be lost. Type "RESET" to confirm.'
+        required: true
+        type: string
+        default: ''
+
+jobs:
+  reset_and_migrate:
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2 and Run Full Reset Migration
+        env:
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          HOST: ${{ secrets.EC2_STG_HOST }}
+          DB_URL: ${{ secrets.DB_URL }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          set -e
+
+          # --------------------
+          # SAFETY CHECK (INPUT VALIDATION)
+          # --------------------
+          if [ "${{ github.event.inputs.confirm_reset }}" != "RESET" ]; then
+            echo "❌ Verify failed: You must type 'RESET' to run this workflow."
+            exit 1
+          fi
+
+          # --------------------
+          # SSH SETUP
+          # --------------------
+          HOST="$(echo "$HOST" | tr -d '\r\n ')"
+          echo "🔍 Using HOST=[$HOST]"
+
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts || true
+          echo "$SSH_KEY" > ~/.ssh/key.pem
+          chmod 600 ~/.ssh/key.pem
+
+          # --------------------
+          # VALIDATE SECRETS
+          # --------------------
+          if [ -z "$DB_URL" ] || [ -z "$DB_USERNAME" ] || [ -z "$DB_PASSWORD" ]; then
+            echo "❌ DB secrets are missing"
+            exit 1
+          fi
+
+          PROJECT_PATH="/home/ubuntu/BeyondU-Data"
+          FULL_DATABASE_URL="mysql+mysqlconnector://${DB_USERNAME}:${DB_PASSWORD}@${DB_URL}:3306/beyondu"
+
+          # --------------------
+          # REMOTE EXECUTION
+          # --------------------
+          ssh -i ~/.ssh/key.pem ubuntu@"$HOST" << EOF
+          set -e
+
+          echo "🚀 Starting Full Database Reset & Migration on EC2"
+
+          # --------------------
+          # PROJECT SETUP
+          # --------------------
+          if [ ! -d "$PROJECT_PATH" ]; then
+            git clone https://github.com/${{ github.repository }}.git "$PROJECT_PATH"
+          fi
+
+          cd "$PROJECT_PATH"
+          git fetch origin
+          git checkout "${{ github.ref_name }}"
+          git reset --hard "origin/${{ github.ref_name }}"
+          git clean -fdx
+
+          find src -name "*.pyc" -delete
+
+          # --------------------
+          # AWS CLI & PYTHON SETUP
+          # --------------------
+          # Ensure AWS CLI is installed (reusing check logic or assuming it exists from previous runs)
+          if ! command -v aws >/dev/null 2>&1; then
+            echo "📦 Installing awscli v2"
+            sudo apt-get update && sudo apt-get install -y curl unzip
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o awscliv2.zip
+            unzip awscliv2.zip
+            sudo ./aws/install
+            rm -rf awscliv2.zip aws
+          fi
+
+          export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
+          export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
+          export AWS_DEFAULT_REGION="ap-northeast-2"
+
+          # --------------------
+          # S3 DATA SYNC
+          # --------------------
+          mkdir -p data/raw
+          echo "📥 Syncing data from S3"
+          aws s3 sync s3://beyondu-data/raw/ data/raw
+
+          ls -la data/raw
+
+          # --------------------
+          # PYTHON ENV
+          # --------------------
+          if [ ! -d "venv" ]; then
+             python3 -m venv venv
+          fi
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+          # --------------------
+          # RUN ETL WITH FULL RESET
+          # --------------------
+          echo "🔥 Dropping ALL tables and re-loading data..."
+            
+          # --drop-db 옵션을 사용하여 기존 테이블을 삭제하고 새로 생성
+          DATABASE_URL="$FULL_DATABASE_URL" \
+          python scripts/run_etl.py --input data/raw --drop-db
+            
+          echo "✅ Full Reset & Migration completed"
+          EOF
