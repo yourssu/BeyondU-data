@@ -101,12 +101,7 @@ class University(Base):
     website_url: Mapped[Optional[str]] = mapped_column(
         Text, nullable=True, comment="공식 홈페이지 주소"
     )
-    thumbnail_url: Mapped[Optional[str]] = mapped_column(
-        Text, nullable=True, comment="학교 로고 또는 대표 이미지"
-    )
-    available_semester: Mapped[Optional[str]] = mapped_column(
-        String(100), nullable=True, comment="파견 가능한 학기 (예: Fall, Spring)"
-    )
+
     is_exchange: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False, comment="교환학생 파견 가능 여부"
     )
