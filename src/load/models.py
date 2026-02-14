@@ -3,6 +3,7 @@
 from typing import List, Optional
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     Float,
     ForeignKey,
@@ -28,7 +29,7 @@ class LanguageRequirement(Base):
     __tablename__ = "language_requirement"
 
     id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, autoincrement=True, comment="어학 요구사항 고유 식별자"
+        BigInteger, primary_key=True, autoincrement=True, comment="어학 요구사항 고유 식별자"
     )
     university_id: Mapped[int] = mapped_column(
         ForeignKey("university.id", ondelete="CASCADE"),
@@ -75,7 +76,7 @@ class University(Base):
     __tablename__ = "university"
 
     id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, autoincrement=True, comment="대학교 고유 식별자"
+        BigInteger, primary_key=True, autoincrement=True, comment="대학교 고유 식별자"
     )
     semester: Mapped[str] = mapped_column(String(100), nullable=False, comment="모집 학기")
     region: Mapped[str] = mapped_column(

@@ -18,7 +18,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "001_restructure_language_scores"
-down_revision = None  # 첫 번째 마이그레이션
+down_revision = "002_restructure_universities"
 branch_labels = None
 depends_on = None
 
@@ -41,7 +41,7 @@ def upgrade() -> None:
         - created_at (DateTime)
     """
     # 1. 기존 테이블 삭제 (데이터가 있다면 백업 필요)
-    op.drop_table("language_scores")
+    op.drop_table("language_scores", if_exists=True)
 
     # 2. 새 테이블 생성
     op.create_table(
@@ -55,7 +55,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("score_id"),
         sa.ForeignKeyConstraint(
             ["university_id"],
-            ["universities.university_id"],
+            ["university.id"],
             ondelete="CASCADE",
         ),
     )
@@ -78,7 +78,7 @@ def downgrade() -> None:
     op.drop_index("idx_language_score_min_score", table_name="language_scores")
     op.drop_index("idx_language_score_university", table_name="language_scores")
     op.drop_index("idx_language_score_test_type", table_name="language_scores")
-    op.drop_table("language_scores")
+    op.drop_table("language_scores", if_exists=True)
 
     # 2. 기존 테이블 복원
     op.create_table(

@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Union, Tuple
 
+import logging
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -14,7 +15,7 @@ from src.load import DatabaseLoader
 from src.transform import DataCleaner
 from src.utils import get_logger
 
-logger = get_logger(__name__)
+logger = get_logger(__name__, level=logging.DEBUG)
 
 
 def process_file(

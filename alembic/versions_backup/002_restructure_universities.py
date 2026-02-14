@@ -19,7 +19,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "002_restructure_universities"
-down_revision = "001_restructure_language_scores"
+down_revision = None
 branch_labels = None
 depends_on = None
 
@@ -45,15 +45,17 @@ def upgrade() -> None:
         - created_at (TIMESTAMP)
         - updated_at (TIMESTAMP)
     """
-    # language_scores 테이블의 FK 제약조건 임시 제거
-    op.drop_constraint(
-        "language_scores_university_id_fkey",
-        "language_scores",
-        type_="foreignkey"
-    )
+    try:
+        op.drop_constraint(
+            "language_scores_university_id_fkey",
+            "language_scores",
+            type_="foreignkey"
+        )
+    except Exception as e:
+        print(f"Warning: Could not drop foreign key constraint 'language_scores_university_id_fkey' from 'language_scores'. It might not exist. Error: {e}")
 
     # 기존 테이블 삭제
-    op.drop_table("universities")
+    op.drop_table("universities", if_exists=True)
 
     # 새 테이블 생성
     op.create_table(
@@ -177,15 +179,7 @@ def upgrade() -> None:
     op.create_index("idx_university_serial", "universities", ["serial_number"])
     op.create_index("idx_university_name_kr", "universities", ["name_kr"])
 
-    # language_scores FK 제약조건 재생성
-    op.create_foreign_key(
-        "language_scores_university_id_fkey",
-        "language_scores",
-        "universities",
-        ["university_id"],
-        ["university_id"],
-        ondelete="CASCADE",
-    )
+
 
 
 def downgrade() -> None:
@@ -207,7 +201,7 @@ def downgrade() -> None:
     op.drop_index("idx_university_program", table_name="universities")
     op.drop_index("idx_university_region", table_name="universities")
     op.drop_index("idx_university_country", table_name="universities")
-    op.drop_table("universities")
+    op.drop_table("universities", if_exists=True)
 
     # 기존 테이블 복원
     op.create_table(
