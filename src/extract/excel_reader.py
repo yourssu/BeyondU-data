@@ -234,10 +234,10 @@ class ExcelReader:
         len1 = len(header1)
         len2 = len(header2)
         max_len = max(len1, len2)
-        
+
         h1_extended = header1 + [None] * (max_len - len1)
         h2_extended = header2 + [None] * (max_len - len2)
-        
+
         merged = []
         for h1, h2 in zip(h1_extended, h2_extended):
             if h1 and str(h1).strip():
