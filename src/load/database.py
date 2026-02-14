@@ -152,6 +152,7 @@ class DatabaseLoader:
                                     "nation": nation,
                                     "name_kor": name_kor,
                                     "name_eng": name_eng,
+                                    "badge": self._get_field(row, "institution"),
                                     "min_gpa": self._gpa_parser.parse(self._get_field(row, "min_gpa")) or 0.0,
                                     "significant_note": self._get_field(row, "significant_note"),
                                     "remark": "\n".join(filter(None, [self._get_field(row, "remark"), self._get_field(row, "remark_ref")])),

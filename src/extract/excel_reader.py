@@ -24,6 +24,8 @@ class ExcelReader:
         "구분": "program_type",
         # Institution
         "기관": "institution",
+        "뱃지": "institution", # Add badge mapping
+        "Badge": "institution", # Add badge mapping
         # Region/Country
         "지역": "region",
         "국가명": "nation",

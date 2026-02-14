@@ -102,6 +102,10 @@ class University(Base):
         Text, nullable=True, comment="공식 홈페이지 주소"
     )
 
+    badge: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True, comment="뱃지 (기관 정보)"
+    )
+
     is_exchange: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False, comment="교환학생 파견 가능 여부"
     )
