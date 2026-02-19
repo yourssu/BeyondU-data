@@ -386,6 +386,9 @@ class ReviewParser:
         Examples:
             "Y(2018)" -> (True, "2018")
             "Y(2013-2019)" -> (True, "2013-2019")
+            "2018" -> (True, "2018")
+            "O" -> (True, None)
+            "Yes" -> (True, None)
             "X" -> (False, None)
             None -> (False, None)
         """
@@ -393,15 +396,34 @@ class ReviewParser:
             return False, None
 
         text_str = str(text).strip()
+        text_upper = text_str.upper()
 
-        # Check if it starts with Y (case-insensitive)
-        if not text_str.upper().startswith("Y"):
+        # Negative cases
+        if text_upper in ("X", "N", "NO", "NONE", "-"):
             return False, None
 
-        # Extract year inside parentheses
-        match = re.search(r"\((.*?)\)", text_str)
-        if match:
-            return True, match.group(1).strip()
+        # Logic:
+        # 1. Look for year pattern (4 digits, or range like 2013-2019)
+        # 2. If year found, assume True.
+        # 3. If no year, check for positive indicators (Y, O, YES, EXIST, etc.)
 
-        # If Y but no parentheses, just return True with no year
-        return True, None
+        # Year pattern: 20xx or 20xx-20xx
+        year_match = re.search(r"(20\d{2}(?:\s*-\s*20\d{2})?)", text_str)
+        if year_match:
+            return True, year_match.group(1).strip()
+
+        # Positive indicators
+        # Starts with Y, O, or is "있음", "존재", etc.
+        positive_keywords = ["Y", "O", "YES", "TRUE", "AVAILABLE", "있음", "후기", "수기"]
+        
+        # Check if it starts with any positive keyword or matches exactly
+        for keyword in positive_keywords:
+            if text_upper.startswith(keyword):
+                return True, None
+        
+        # If it's just some non-negative text, valid review might be implied? 
+        # But let's be conservative. If it's not X and doesn't have Year, 
+        # but has some content... 
+        # Let's stick to explicit positive start or year presence.
+        
+        return False, None
