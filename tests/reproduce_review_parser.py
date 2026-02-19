@@ -21,7 +21,7 @@ def test_review_parser():
         ("2023", (True, "2023")),      # Now valid
         ("O", (True, None)),           # Now valid
     ]
-    
+
     print("Testing ReviewParser...")
     failures = 0
     for input_text, expected in test_cases:
@@ -31,7 +31,7 @@ def test_review_parser():
             failures += 1
         else:
             print(f"PASS: Input '{input_text}' -> {result}")
-            
+
     if failures == 0:
         print("\nAll tests passed!")
     else:

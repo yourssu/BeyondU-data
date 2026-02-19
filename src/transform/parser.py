@@ -420,7 +420,7 @@ class ReviewParser:
         for keyword in positive_keywords:
             if text_upper.startswith(keyword):
                 return True, None
-        
+
         # If it's just some non-negative text, valid review might be implied?
         # But let's be conservative. If it's not X and doesn't have Year,
         # but has some content...

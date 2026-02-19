@@ -76,9 +76,9 @@ class ExcelReader:
         # 2. Extract data with header
         headers = [str(x).strip() if x else f"Unnamed_{i}" for i, x in enumerate(data[header_idx])]
         body = data[header_idx + 1:]
-        
+
         df = pd.DataFrame(body, columns=headers)
-        
+
         # 3. Rename columns using mapping
 
         # We need to map actual header names to our internal names
@@ -94,7 +94,7 @@ class ExcelReader:
             if col_clean in self.COLUMN_MAPPING:
                 rename_dict[col] = self.COLUMN_MAPPING[col_clean]
                 continue
-            
+
             # Check if any key is a substring? Be careful.
             # "대학명" is in "대학명(국문)"
             # Let's try to match the longest key that is a substring of col_clean
@@ -109,28 +109,28 @@ class ExcelReader:
                 rename_dict[col] = matches[0][1]
 
         df = df.rename(columns=rename_dict)
-        
+
         # Fill merged cells (forward fill) - rudimentary implementation
         # A full implementation would need to handle the merge ranges from openpyxl
         # For now, let's assume pandas read it or we rely on simple ffill if appropriate
-        # But 'extract_with_merged_cells' was mentioned in GEMINI.md. 
-        # Since I am recreating the file from scratch based on a truncated view, 
+        # But 'extract_with_merged_cells' was mentioned in GEMINI.md.
+        # Since I am recreating the file from scratch based on a truncated view,
         # I should try to implement a robust enough version or rely on what I saw.
-        # But I didn't see the implementation of 'extract_with_merged_cells'. 
-        
-        # Let's assume standard pandas read for now given the constraints, 
+        # But I didn't see the implementation of 'extract_with_merged_cells'.
+
+        # Let's assume standard pandas read for now given the constraints,
         # BUT I must include the COLUMN_MAPPING which was my main goal.
-        
+
         return df
 
     def extract_file_metadata(self) -> Dict[str, Any]:
         """Extract metadata from filename."""
         # E.g. "2024-1학기_파견_교환학생_T.O_및_선발_현황(2023.08.01).xlsx"
         filename = self.file_path.name
-        
+
         semester_match = re.search(r"(\d{4})[-_](\d|여름|겨울)학기", filename)
         semester = f"{semester_match.group(1)}-{semester_match.group(2)}" if semester_match else "Unknown"
-        
+
         return {
             "filename": filename,
             "semester": semester,
@@ -144,7 +144,7 @@ class ExcelReader:
         for i, row in enumerate(data[:10]):  # Search in the first 10 rows
             # Convert row to a single string for keyword searching
             row_str = " ".join(str(x).upper() for x in row if x is not None and str(x).strip())
-            
+
             # Check if any search keyword is present in the row string
             if any(keyword in row_str for keyword in search_keywords):
                 return i
