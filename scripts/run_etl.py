@@ -16,6 +16,9 @@ from src.transform import DataCleaner
 from src.utils import get_logger
 
 logger = get_logger(__name__, level=logging.DEBUG)
+file_handler = logging.FileHandler("etl_debug.log", encoding="utf-8")
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(file_handler)
 
 
 def process_file(
