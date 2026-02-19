@@ -2,10 +2,10 @@
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Union, cast
+from typing import Any, Dict, List, Union
 
 import pandas as pd
-from openpyxl import Workbook, load_workbook
+from openpyxl import load_workbook
 from openpyxl.cell.cell import MergedCell
 
 
@@ -50,11 +50,9 @@ class ExcelReader:
             raise FileNotFoundError(f"File not found: {self.file_path}")
 
         wb = load_workbook(self.file_path, data_only=True)
-        
         self._workbook = wb
         sheet = wb.active
 
-        # Convert sheet to list of lists
         data = []
         for row in sheet.rows:
             row_data = []
