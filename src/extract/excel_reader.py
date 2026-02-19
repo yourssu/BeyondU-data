@@ -110,16 +110,9 @@ class ExcelReader:
 
         df = df.rename(columns=rename_dict)
 
-        # Fill merged cells (forward fill) - rudimentary implementation
-        # A full implementation would need to handle the merge ranges from openpyxl
-        # For now, let's assume pandas read it or we rely on simple ffill if appropriate
-        # But 'extract_with_merged_cells' was mentioned in GEMINI.md.
-        # Since I am recreating the file from scratch based on a truncated view,
-        # I should try to implement a robust enough version or rely on what I saw.
-        # But I didn't see the implementation of 'extract_with_merged_cells'.
-
-        # Let's assume standard pandas read for now given the constraints,
-        # BUT I must include the COLUMN_MAPPING which was my main goal.
+        # Fill merged cells (forward fill)
+        # This handles vertical merges (like "Country" appearing once for multiple rows)
+        df = df.ffill()
 
         return df
 

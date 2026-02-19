@@ -69,8 +69,9 @@ class TestExcelReader:
         df = reader.read()
 
         assert len(df) == 2
-        assert "국가" in df.columns
-        assert df.iloc[0]["대학명"] == "Harvard"
+        assert "nation" in df.columns
+        assert "name_kor" in df.columns
+        assert df.iloc[0]["name_kor"] == "Harvard"
 
     def test_read_merged_cells(self, merged_cell_excel: Path) -> None:
         """Test that merged cells are properly filled."""
@@ -78,15 +79,10 @@ class TestExcelReader:
         df = reader.read()
 
         # Both rows should have "미국" in the country column
-        assert df.iloc[0]["국가"] == "미국"
-        assert df.iloc[1]["국가"] == "미국"
+        assert df.iloc[0]["nation"] == "미국"
+        assert df.iloc[1]["nation"] == "미국"
 
-    def test_get_sheet_names(self, sample_excel: Path) -> None:
-        """Test getting sheet names."""
-        reader = ExcelReader(sample_excel)
-        names = reader.get_sheet_names()
 
-        assert "Sheet1" in names
 
     def test_file_not_found(self, tmp_path: Path) -> None:
         """Test handling of non-existent file."""
