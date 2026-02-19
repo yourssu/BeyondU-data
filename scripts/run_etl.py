@@ -13,6 +13,8 @@ from src.config import settings
 from src.extract import ExcelReader
 from src.load import DatabaseLoader
 from src.transform import DataCleaner
+from src.utils import get_logger
+
 logger = get_logger(__name__, level=logging.DEBUG)
 
 
