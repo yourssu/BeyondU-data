@@ -143,7 +143,7 @@ class ExcelReader:
 
         # Deduplicate columns to avoid AttributeError in DataCleaner
         new_cols = []
-        counts = {}
+        counts: Dict[str, int] = {}
         for col in df.columns:
             if col in counts:
                 counts[col] += 1
