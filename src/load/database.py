@@ -15,6 +15,7 @@ from src.transform.parser import (
     WebsiteURLParser,
 )
 from src.utils import get_logger
+
 from .models import Base, LanguageRequirement, University
 
 logger = get_logger(__name__)

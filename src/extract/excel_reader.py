@@ -85,7 +85,7 @@ class ExcelReader:
         # Our mapping keys are keywords. We should find the column that *contains* the keyword?
         # Or exact match? Usually exact or close match.
         # Let's try exact match first for known columns.
-        
+
         # Actually, simpler strategy: Iterate over df columns and check if they match any key in mapping
         rename_dict = {}
         for col in df.columns:
@@ -102,7 +102,7 @@ class ExcelReader:
             for key, val in self.COLUMN_MAPPING.items():
                 if key in col_clean:
                     matches.append((key, val))
-            
+
             if matches:
                 # Sort by key length descending
                 matches.sort(key=lambda x: len(x[0]), reverse=True)
