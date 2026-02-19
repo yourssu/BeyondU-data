@@ -13,8 +13,6 @@ from src.config import settings
 from src.extract import ExcelReader
 from src.load import DatabaseLoader
 from src.transform import DataCleaner
-from src.utils import get_logger
-
 logger = get_logger(__name__, level=logging.DEBUG)
 
 
@@ -33,6 +31,12 @@ def process_file(
 
     logger.info(f"  Extracted {len(df)} rows")
     logger.info(f"  Metadata: semester={metadata['semester']}, round={metadata['recruitment_round']}")
+
+    # Inject metadata into DataFrame
+    # This is crucial because DatabaseLoader expects 'semester' in the DataFrame
+    for key, value in metadata.items():
+        if key not in df.columns:
+            df[key] = value
 
     if len(df) == 0:
         logger.warning(f"  No data extracted from {file_path.name}")
