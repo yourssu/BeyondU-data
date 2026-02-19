@@ -87,14 +87,14 @@ class ExcelReader:
         # 2. Extract data with header
         # Check for sub-headers in the next row
         headers = [str(x).strip().replace("\n", " ") if x else "" for x in data[header_idx]]
-        
+
         start_row_idx = header_idx + 1
-        
+
         # Heuristic: Check if next row contains specific sub-header keywords
         if header_idx + 1 < len(data):
             next_row_vals = [str(x).strip().replace("\n", " ") if x else "" for x in data[header_idx + 1]]
             sub_keywords = ["최소 학점", "최소학점", "어학성적", "어학 성적", "특이사항"]
-            
+
             if any(k in " ".join(next_row_vals) for k in sub_keywords):
                 # Detected sub-headers! Combine them.
                 combined_headers = []
@@ -122,7 +122,7 @@ class ExcelReader:
         rename_dict = {}
         for col in df.columns:
             col_clean = str(col).strip().replace("\n", " ")
-            
+
             # Check exact match
             if col_clean in self.COLUMN_MAPPING:
                 rename_dict[col] = self.COLUMN_MAPPING[col_clean]
@@ -168,7 +168,7 @@ class ExcelReader:
         if not semester_match:
              # Try finding pattern anywhere
              semester_match = re.search(r"(\d{4})[-_](\d|여름|겨울)", filename)
-        
+
         semester = f"{semester_match.group(1)}-{semester_match.group(2)}" if semester_match else "Unknown"
 
         return {
