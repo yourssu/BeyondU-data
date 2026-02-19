@@ -415,15 +415,15 @@ class ReviewParser:
         # Positive indicators
         # Starts with Y, O, or is "있음", "존재", etc.
         positive_keywords = ["Y", "O", "YES", "TRUE", "AVAILABLE", "있음", "후기", "수기"]
-        
+
         # Check if it starts with any positive keyword or matches exactly
         for keyword in positive_keywords:
             if text_upper.startswith(keyword):
                 return True, None
         
-        # If it's just some non-negative text, valid review might be implied? 
-        # But let's be conservative. If it's not X and doesn't have Year, 
-        # but has some content... 
+        # If it's just some non-negative text, valid review might be implied?
+        # But let's be conservative. If it's not X and doesn't have Year,
+        # but has some content...
         # Let's stick to explicit positive start or year presence.
-        
+
         return False, None

@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Union
 
 import pandas as pd
 from openpyxl import load_workbook
@@ -80,7 +80,7 @@ class ExcelReader:
         df = pd.DataFrame(body, columns=headers)
         
         # 3. Rename columns using mapping
-        reversed_mapping = {}
+
         # We need to map actual header names to our internal names
         # Our mapping keys are keywords. We should find the column that *contains* the keyword?
         # Or exact match? Usually exact or close match.

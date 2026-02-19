@@ -2,6 +2,11 @@
 
 from typing import Any, Dict, List, Optional
 
+import logging
+from src.utils import get_logger
+
+logger = get_logger(__name__)
+
 import pandas as pd
 from sqlalchemy import create_engine, delete, select
 from sqlalchemy.orm import Session, sessionmaker

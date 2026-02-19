@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 
 # Add the project root to the python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -8,7 +8,6 @@ from src.transform.parser import ReviewParser
 
 def test_review_parser():
     parser = ReviewParser()
-    
     test_cases = [
         ("Y(2018)", (True, "2018")),
         ("Y(2013-2019)", (True, "2013-2019")),
