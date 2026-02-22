@@ -159,7 +159,7 @@ class LanguageParser:
                         language_group=lang_group,
                         source="code",
                     )
-        
+
         # Step 2: Direct parsing to override specific scores
         for pattern, exam_type, converter in self.SCORE_PATTERNS:
             if exam_type in result.excluded_tests:
@@ -177,7 +177,7 @@ class LanguageParser:
 
                     if score is None or language_group is None:
                         continue
-                    
+
                     if exam_type in scores_map:
                         # Override score, keep existing level_code
                         scores_map[exam_type].min_score = score
@@ -190,7 +190,7 @@ class LanguageParser:
                                 if LANGUAGE_STANDARDS[code]["category"] == language_group:
                                     matched_level_code = code
                                     break
-                                    
+
                         scores_map[exam_type] = ParsedScoreInfo(
                             exam_type=exam_type,
                             min_score=score,
@@ -318,7 +318,6 @@ class LanguageParser:
 
         region_str = str(region).strip() if region else ""
         is_europe = '유럽' in region_str or '유럽' in text_upper
-        is_asia = '아시아' in region_str or '중국' in text_upper or '일본' in text_upper
 
         # 1. Explicit Europe codes like EU_B2
         for match in re.finditer(r'\b(EU_[A-E][1-5])\b', text_upper):
@@ -359,13 +358,15 @@ class LanguageParser:
                     codes.add(f"EU_{raw_grade}")
                 else:
                     code = f"CN_{raw_grade}"
-                    if code in LANGUAGE_STANDARDS: codes.add(code)
+                    if code in LANGUAGE_STANDARDS:
+                        codes.add(code)
             elif raw_grade.startswith('C'):
                 if is_europe and f"EU_{raw_grade}" in LANGUAGE_STANDARDS:
                     codes.add(f"EU_{raw_grade}")
                 else:
                     code = f"JP_{raw_grade}"
-                    if code in LANGUAGE_STANDARDS: codes.add(code)
+                    if code in LANGUAGE_STANDARDS:
+                        codes.add(code)
             elif raw_grade.startswith('D') or raw_grade.startswith('E'):
                 if raw_grade in LANGUAGE_STANDARDS:
                     codes.add(raw_grade)

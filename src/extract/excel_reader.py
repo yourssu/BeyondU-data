@@ -141,12 +141,12 @@ class ExcelReader:
     def _get_region_mapping(cls, data_dir: Path) -> Dict[str, str]:
         if hasattr(cls, "_region_mapping_cache"):
             return cls._region_mapping_cache
-            
+
         mapping = {}
         # Use 2024 or 2025 files as reference containing 'region' column
         ref_files = list(data_dir.glob("2024*.xlsx")) + list(data_dir.glob("2025*.xlsx"))
         ref_files = [f for f in ref_files if not f.name.startswith("~")]
-        
+
         if ref_files:
             try:
                 reader = cls(ref_files[-1])
@@ -156,7 +156,7 @@ class ExcelReader:
                     mapping = dict(zip(valid_rows["nation"], valid_rows["region"]))
             except Exception:
                 pass
-                
+
         cls._region_mapping_cache = mapping
         return mapping
 
