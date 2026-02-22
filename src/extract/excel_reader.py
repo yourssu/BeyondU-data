@@ -14,10 +14,11 @@ class ExcelReader:
 
     # Column mapping configuration
     COLUMN_MAPPING = {
+        "지역": "region",
         "파견국가": "nation",
         "국가": "nation",
         "국가명": "nation",
-        "대학명(국문)": "name_kor",
+        "대학명(한글)": "name_kor",
         "대학명": "name_kor",
         "대학명(영문)": "name_eng",
         "University Name": "name_eng",
@@ -28,18 +29,14 @@ class ExcelReader:
         "어학성적": "language_requirement",
         "어학 성적": "language_requirement",
         "지원 자격 어학성적": "language_requirement",
-        "GPA": "min_gpa",
-        "평점": "min_gpa",
         "최소 학점": "min_gpa",
-        "최소학점": "min_gpa",
-        "지원 자격 최소 학점": "min_gpa",
         "수학가능전공": "available_majors",
         "수학가능학과": "available_majors",
         "수학가능학과/영어강의목록 등": "available_majors",
-        "참고사항": "significant_note",
+        "참고사항": "remark",
         "특이사항": "significant_note",
         "특이 사항": "significant_note",
-        "유의사항": "significant_note",
+        "유의사항": "remark_ref",
         "지원 자격 특이사항": "significant_note",
         "비고": "remark",
         "홈페이지": "website_url",
@@ -85,35 +82,11 @@ class ExcelReader:
             raise ValueError(f"Could not find valid header row in {self.file_path.name}")
 
         # 2. Extract data with header
-        # Check for sub-headers in the next row
         headers = [str(x).strip().replace("\n", " ") if x else "" for x in data[header_idx]]
+        # Fill empty headers
+        headers = [h if h else f"Unnamed_{i}" for i, h in enumerate(headers)]
 
         start_row_idx = header_idx + 1
-
-        # Heuristic: Check if next row contains specific sub-header keywords
-        if header_idx + 1 < len(data):
-            next_row_vals = [str(x).strip().replace("\n", " ") if x else "" for x in data[header_idx + 1]]
-            sub_keywords = ["최소 학점", "최소학점", "어학성적", "어학 성적", "특이사항"]
-
-            if any(k in " ".join(next_row_vals) for k in sub_keywords):
-                # Detected sub-headers! Combine them.
-                combined_headers = []
-                for i, h in enumerate(headers):
-                    sub = next_row_vals[i] if i < len(next_row_vals) else ""
-                    if not h and sub:
-                        combined_headers.append(sub)
-                    elif h and sub:
-                        combined_headers.append(f"{h} {sub}")
-                    elif h:
-                        combined_headers.append(h)
-                    else:
-                        combined_headers.append(f"Unnamed_{i}")
-                headers = combined_headers
-                start_row_idx = header_idx + 2
-            else:
-                # Fill empty headers
-                headers = [h if h else f"Unnamed_{i}" for i, h in enumerate(headers)]
-
         body = data[start_row_idx:]
 
         df = pd.DataFrame(body, columns=headers)
@@ -153,10 +126,39 @@ class ExcelReader:
                 new_cols.append(col)
         df.columns = new_cols
 
-        # Fill merged cells (forward fill)
-        df = df.ffill()
+        # The global df.ffill() was removed because it maliciously fills min_gpa and other fields.
+        # We only need to forward fill specific structural columns, which is handled in DataCleaner.
+
+        # Handle 2023 files missing 'region' column
+        if "region" not in df.columns and "2023" in self.file_path.name:
+            mapping = self._get_region_mapping(self.file_path.parent)
+            if "nation" in df.columns:
+                df["region"] = df["nation"].map(mapping).fillna("Unknown")
 
         return df
+
+    @classmethod
+    def _get_region_mapping(cls, data_dir: Path) -> Dict[str, str]:
+        if hasattr(cls, "_region_mapping_cache"):
+            return cls._region_mapping_cache
+            
+        mapping = {}
+        # Use 2024 or 2025 files as reference containing 'region' column
+        ref_files = list(data_dir.glob("2024*.xlsx")) + list(data_dir.glob("2025*.xlsx"))
+        ref_files = [f for f in ref_files if not f.name.startswith("~")]
+        
+        if ref_files:
+            try:
+                reader = cls(ref_files[-1])
+                ref_df = reader.read()
+                if "nation" in ref_df.columns and "region" in ref_df.columns:
+                    valid_rows = ref_df.dropna(subset=["nation", "region"])
+                    mapping = dict(zip(valid_rows["nation"], valid_rows["region"]))
+            except Exception:
+                pass
+                
+        cls._region_mapping_cache = mapping
+        return mapping
 
     def extract_file_metadata(self) -> Dict[str, Any]:
         """Extract metadata from filename."""

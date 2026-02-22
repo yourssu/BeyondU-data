@@ -1,45 +1,23 @@
-# Implementation Plan - Add Badge Column
+# Excel Reader Refactoring Plan
 
-The user wants to store the "기관" (Institution) information from the Excel file into a new database column called `badge`.
+## 1. Goal Description
+The goal is to simplify `src/extract/excel_reader.py` because the raw Excel files now have a uniform header format. The complex sub-header merging logic can be removed.
+Additionally, 2023 Excel files lack the "지역" (region) column. We need to handle this exception by referencing other data (e.g., a 2024 or 2025 file) to populate the "지역" column based on the "국가" (nation/country).
 
-## Proposed Changes
+## 2. Proposed Changes
 
-### 1. Database Model (`src/load/models.py`)
+### `src/extract/excel_reader.py`
+- Remove the heuristic logic that merges two header rows (`if header_idx + 1 < len(data): ...`).
+- Keep simply `headers = data[header_idx]` and `start_row_idx = header_idx + 1`.
+- Add `"지역": "region"` to `COLUMN_MAPPING`.
+- In `read()`, handle the 2023 exception: 
+  - If `"2023" in self.file_path.name` and `"region"` is missing from columns:
+    - Load a reference Excel file (e.g., `2024-1 교환학생 파견가능대학 및 지원자격(1차).xlsx` or any non-2023 file in the same directory).
+    - Read the reference file's `국가`/`파견국가` -> `지역` mapping.
+    - Map the `nation` column of the 2023 dataframe to fill the `region` column.
 
-Add a new column `badge` to the `University` table.
-
-```python
-    # ...
-    # [NEW] Badge column mapping to 'institution' from Excel
-    badge: Mapped[Optional[str]] = mapped_column(
-        String(100), nullable=True, comment="뱃지 (기관 정보)"
-    )
-    # ...
-```
-
-### 2. Database Loading (`src/load/database.py`)
-
-Update `load_universities_dataframe` to extract `institution` from the DataFrame and map it to `badge`.
-
-```python
-                # ...
-                data = {
-                    "semester": new_semester_from_file,
-                    "region": region,
-                    "nation": nation,
-                    "name_kor": name_kor,
-                    "name_eng": name_eng,
-                    "badge": self._get_field(row, "institution"), # Map institution to badge
-                    # ...
-                }
-```
-
-### 3. Alembic Migration
-
-Run `alembic revision --autogenerate -m "add_badge_column"` to generate the migration script.
-Then `alembic upgrade head` to apply it.
-
-## Verification Plan
-
-1.  **Manual Code Review**: Verify `models.py` and `database.py` changes.
-2.  **Migration Generation**: Attempt to generate the migration file using `alembic`.
+## 3. Verification Plan
+- **Automated Tests**:
+  - Run `python scripts/run_etl.py --dry-run` to test the full extraction process without affecting the DB. It should process all 2023-2026 files successfully, and print out logs indicating that "region" is present in the extracted dataframes.
+- **Manual Verification**:
+  - Add debug prints or logs to confirm that for 2023 files, the "region" mapping succeeded.

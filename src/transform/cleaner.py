@@ -69,14 +69,14 @@ class DataCleaner:
 
     def _forward_fill_merged_columns(self) -> None:
         """Forward fill columns that typically have merged cells."""
-        merge_columns = ["country", "region", "program_type", "institution"]
+        merge_columns = ["nation", "region", "program_type", "institution"]
         for col in merge_columns:
             if col in self.df.columns:
                 self.df[col] = self.df[col].ffill()
 
     def _remove_invalid_rows(self) -> None:
         """Remove rows without essential data."""
-        essential_cols = ["name_kr", "country"]
+        essential_cols = ["name_kor", "nation"]
         existing = [col for col in essential_cols if col in self.df.columns]
 
         if existing:
@@ -85,9 +85,9 @@ class DataCleaner:
             self.df = self.df[mask].copy()
 
             # Remove summary rows
-            if "name_kr" in self.df.columns:
+            if "name_kor" in self.df.columns:
                 self.df = self.df[
-                    ~self.df["name_kr"]
+                    ~self.df["name_kor"]
                     .astype(str)
                     .str.contains("합계|소계|총계|nan", case=False, na=False)
                 ].copy()

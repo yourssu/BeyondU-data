@@ -118,6 +118,9 @@ class University(Base):
     review_year: Mapped[Optional[str]] = mapped_column(
         String(50), nullable=True, comment="수기 연도 (예: 2018, 2013-2019)"
     )
+    language_score: Mapped[Optional[str]] = mapped_column(
+        Text, nullable=True, comment="어학성적 원문"
+    )
 
     # Relationships
     language_requirements: Mapped[List["LanguageRequirement"]] = relationship(

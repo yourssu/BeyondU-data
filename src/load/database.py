@@ -169,6 +169,7 @@ class DatabaseLoader:
                     "is_visit": "방문" in program_type_str,
                     "has_review": has_review,
                     "review_year": review_year,
+                    "language_score": lang_req_parse_text,
                     "available_semester": self._get_field(row, "available_semester"), # 이 부분은 더 이상 모델에 없음
 
                 }
@@ -196,8 +197,7 @@ class DatabaseLoader:
                         )
 
                     for key, value in data.items():
-                        if value is not None:
-                            setattr(university, key, value)
+                        setattr(university, key, value)
                     stats["updated"] += 1
                 else:  # Insert new university
                     university = University(**data)
@@ -206,19 +206,26 @@ class DatabaseLoader:
                     # Add to map to allow updates within the same dataframe run
                     existing_map[composite_key] = university
 
-                if university and lang_req_parse_text:
+                if university:
                     # We need the ID for language requirements, so flush to get it
                     if not university.id:
                         session.flush()
 
-                    parsed_req = self._language_parser.parse(
-                        lang_req_parse_text, region=university.region
-                    )
-                    if not parsed_req.is_optional and university.id:
-                        count = self._load_language_requirements(
-                            session, university.id, parsed_req, excluded_exams
+                    if lang_req_parse_text:
+                        parsed_req = self._language_parser.parse(
+                            lang_req_parse_text, region=university.region
                         )
-                        stats["language_reqs"] += count
+                        if not parsed_req.is_optional and university.id:
+                            count = self._load_language_requirements(
+                                session, university.id, parsed_req, excluded_exams
+                            )
+                            stats["language_reqs"] += count
+                        else:
+                            # If it's optional, clear existing language requirements
+                            session.execute(delete(LanguageRequirement).where(LanguageRequirement.university_id == university.id))
+                    else:
+                        # If there is no language requirement text, clear existing
+                        session.execute(delete(LanguageRequirement).where(LanguageRequirement.university_id == university.id))
 
             session.commit()
 

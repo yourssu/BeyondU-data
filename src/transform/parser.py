@@ -34,22 +34,22 @@ LANGUAGE_STANDARDS: Dict[str, Any] = { # Added type hint for LANGUAGE_STANDARDS
     "A3": {"category": "ENGLISH", "scores": {"TOEFL": 75.0, "IELTS": 5.5, "TOEIC": 800.0, "TOEFL_ITP": 545.0}},
     "A4": {"category": "ENGLISH", "scores": {"TOEFL": 70.0, "IELTS": 5.0, "TOEIC": 750.0, "TOEFL_ITP": 530.0}},
     "A5": {"category": "ENGLISH", "scores": {"TOEFL": 60.0, "IELTS": 4.5, "TOEIC": 700.0, "TOEFL_ITP": 515.0}},
-    "EU_A2": {"category": "ENGLISH", "scores": {"TOEIC": 225.0}},
-    "EU_B1": {"category": "ENGLISH", "scores": {"TOEFL": 42.0, "IELTS": 4.0, "TOEIC": 550.0}},
-    "EU_B2": {"category": "ENGLISH", "scores": {"TOEFL": 72.0, "IELTS": 5.5, "TOEIC": 785.0}},
-    "EU_C1": {"category": "ENGLISH", "scores": {"TOEFL": 95.0, "IELTS": 6.5, "TOEIC": 945.0}},
-    "EU_C2": {"category": "ENGLISH", "scores": {"IELTS": 8.0}},
+    "EU_A2": {"category": "ENGLISH", "scores": {"TOEFL": 24.0, "IELTS": 4.5, "TOEIC": 225.0}},
+    "EU_B1": {"category": "ENGLISH", "scores": {"TOEFL": 44.0, "IELTS": 5.5, "TOEIC": 550.0}},
+    "EU_B2": {"category": "ENGLISH", "scores": {"TOEFL": 72.0, "IELTS": 6.0, "TOEIC": 785.0}},
+    "EU_C1": {"category": "ENGLISH", "scores": {"TOEFL": 95.0, "IELTS": 7.0, "TOEIC": 945.0}},
+    "EU_C2": {"category": "ENGLISH", "scores": {"TOEFL": 114.0, "IELTS": 8.0}},
     "D1": {"category": "FRENCH", "scores": {"DELF": 2.0}},
     "D2": {"category": "FRENCH", "scores": {"DELF": 1.0}},
     "D3": {"category": "FRENCH", "scores": {"DELF": 0.5}},
     "E1": {"category": "GERMAN", "scores": {"ZD": 2.0}},
     "E2": {"category": "GERMAN", "scores": {"ZD": 1.0}},
     "E3": {"category": "GERMAN", "scores": {"ZD": 0.5}},
-    "B1": {"category": "CHINESE", "scores": {"HSK": 6.0}},
-    "B2": {"category": "CHINESE", "scores": {"HSK": 5.0}},
-    "B3": {"category": "CHINESE", "scores": {"HSK": 4.0}},
-    "C1": {"category": "JAPANESE", "scores": {"JLPT": 1.0, "JPT": 900.0}},
-    "C2": {"category": "JAPANESE", "scores": {"JLPT": 2.0, "JPT": 600.0}},
+    "CN_B1": {"category": "CHINESE", "scores": {"HSK": 6.0}},
+    "CN_B2": {"category": "CHINESE", "scores": {"HSK": 5.0}},
+    "CN_B3": {"category": "CHINESE", "scores": {"HSK": 4.0}},
+    "JP_C1": {"category": "JAPANESE", "scores": {"JLPT": 1.0, "JPT": 900.0}},
+    "JP_C2": {"category": "JAPANESE", "scores": {"JLPT": 2.0, "JPT": 600.0}},
 }
 
 LEGACY_CODE_ALIASES: Dict[str, str] = { # Added type hint for LEGACY_CODE_ALIASES
@@ -66,11 +66,24 @@ TEST_TYPE_TO_LANGUAGE_GROUP: Dict[str, str] = { # Added type hint for TEST_TYPE_
     "DELF": "FRENCH",
     "ZD": "GERMAN",
     "TOPIK": "KOREAN",
+    "DELE": "SPANISH",
+    "CELI": "ITALIAN",
+    "CILS": "ITALIAN",
 }
 
 def _cefr_to_float(level_str: str) -> float:
     level_str = level_str.upper().strip()
     mapping = {"B2": 2.0, "B1": 1.0, "A2": 0.5, "A1": 0.25, "C1": 3.0, "C2": 4.0}
+    return mapping.get(level_str, 0.0)
+
+def _dele_to_float(level_str: str) -> float:
+    level_str = level_str.upper().strip()
+    mapping = {"A1": 6.0, "A2": 5.0, "B1": 4.0, "B2": 3.0, "C1": 2.0, "C2": 1.0}
+    return mapping.get(level_str, 0.0)
+
+def _italian_cefr_to_float(level_str: str) -> float:
+    level_str = level_str.upper().strip()
+    mapping = {"A1": 1.0, "A2": 2.0, "B1": 3.0, "B2": 4.0, "C1": 5.0, "C2": 6.0}
     return mapping.get(level_str, 0.0)
 
 
@@ -83,7 +96,7 @@ class LanguageParser:
         (r"토플\s*(?:IBT|iBT)?\s*(\d+)", "TOEFL", lambda x: float(x.replace(',', ''))),
         (r"TOEIC\s*([\d,]+)", "TOEIC", lambda x: float(x.replace(',', ''))),
         (r"토익\s*([\d,]+)", "TOEIC", lambda x: float(x.replace(',', ''))),
-        (r"(?:IELTS|ITELTS)\s*(\d+\.?\d*)", "IELTS", lambda x: float(x.replace(',', ''))),
+        (r"(?:IELTS|ITELTS|IETS)\s*(\d+\.?\d*)", "IELTS", lambda x: float(x.replace(',', ''))),
         (r"아이엘츠\s*(\d+\.?\d*)", "IELTS", lambda x: float(x.replace(',', ''))),
         (r"Duolingo\s*(\d+)", "DUOLINGO", lambda x: float(x.replace(',', ''))),
         (r"HSK\s*(\d+)급?", "HSK", lambda x: float(x.replace(',', ''))),
@@ -92,6 +105,9 @@ class LanguageParser:
         (r"JPT\s*([\d,]+)", "JPT", lambda x: float(x.replace(',', ''))),
         (r"DELF\s*([ABCE])(\d)?", "DELF", lambda x: _cefr_to_float(x)),
         (r"ZD\s*([ABCE])(\d)?", "ZD", lambda x: _cefr_to_float(x)),
+        (r"DELE\s*([A-C][1-2])", "DELE", lambda x: _dele_to_float(x)),
+        (r"CELI\s*([A-C][1-2])", "CELI", lambda x: _italian_cefr_to_float(x)),
+        (r"CILS\s*([A-C][1-2])", "CILS", lambda x: _italian_cefr_to_float(x)),
         (r"TOPIK\s*(\d+)급?", "TOPIK", lambda x: float(x.replace(',', ''))),
     ]
 
@@ -129,16 +145,29 @@ class LanguageParser:
                 if "ITP" in pattern:
                     result.excluded_tests.append("TOEFL_ITP")
 
-        # Step 1: Direct parsing first.
-        # This finds all explicitly mentioned scores (e.g., "TOEFL 80", "IELTS 6.5")
-        # and gives them precedence by adding them to the map first.
+        # Step 1: Code-based parsing to set baseline requirements
+        matched_codes = self._match_standard_codes(text, region)
+        for code in matched_codes:
+            standard = LANGUAGE_STANDARDS[code]
+            lang_group = standard["category"]
+            for exam, score in standard["scores"].items():
+                if exam not in result.excluded_tests:
+                    scores_map[exam] = ParsedScoreInfo(
+                        exam_type=exam,
+                        min_score=float(score),
+                        level_code=code,
+                        language_group=lang_group,
+                        source="code",
+                    )
+        
+        # Step 2: Direct parsing to override specific scores
         for pattern, exam_type, converter in self.SCORE_PATTERNS:
             if exam_type in result.excluded_tests:
                 continue
             for match in re.finditer(pattern, text, re.IGNORECASE):
                 try:
                     raw_score = match.group(1)
-                    if exam_type in ("DELF", "ZD"):
+                    if exam_type in ("DELF", "ZD", "DELE", "CELI", "CILS"):
                         # This line is potentially problematic as `match.group(0)` might not always contain the level code directly
                         # Re-evaluate logic if this doesn't work.
                         raw_score = match.group(0).split()[-1]
@@ -148,35 +177,29 @@ class LanguageParser:
 
                     if score is None or language_group is None:
                         continue
-
-                    # Add or override score in the map.
-                    scores_map[exam_type] = ParsedScoreInfo(
-                        exam_type=exam_type,
-                        min_score=score,
-                        level_code=raw_score if exam_type in ("DELF", "ZD") else None,
-                        language_group=language_group, # mypy should now infer language_group as str
-                        source="direct",
-                    )
+                    
+                    if exam_type in scores_map:
+                        # Override score, keep existing level_code
+                        scores_map[exam_type].min_score = score
+                        scores_map[exam_type].source = "direct_override"
+                    else:
+                        # Look for a matching level_code in matched_codes that has the same language group
+                        matched_level_code = None
+                        if exam_type not in ("DELF", "ZD", "DELE", "CELI", "CILS"):
+                            for code in matched_codes:
+                                if LANGUAGE_STANDARDS[code]["category"] == language_group:
+                                    matched_level_code = code
+                                    break
+                                    
+                        scores_map[exam_type] = ParsedScoreInfo(
+                            exam_type=exam_type,
+                            min_score=score,
+                            level_code=raw_score if exam_type in ("DELF", "ZD", "DELE", "CELI", "CILS") else matched_level_code,
+                            language_group=language_group,
+                            source="direct",
+                        )
                 except (ValueError, TypeError, IndexError):
                     continue
-
-        # Step 2: Code-based parsing to fill in any missing scores.
-        # If a standard code (e.g., "A-4") is found, this provides default scores
-        # for any test types that were not explicitly mentioned in the text.
-        matched_code = self._match_standard_code(text, region)
-        if matched_code and matched_code in LANGUAGE_STANDARDS:
-            standard = LANGUAGE_STANDARDS[matched_code]
-            lang_group = standard["category"]
-            for exam, score in standard["scores"].items():
-                # Only add if not already present from direct parsing
-                if exam not in scores_map and exam not in result.excluded_tests:
-                    scores_map[exam] = ParsedScoreInfo(
-                        exam_type=exam,
-                        min_score=float(score),
-                        level_code=matched_code,
-                        language_group=lang_group,
-                        source="code",
-                    )
 
         result.scores = list(scores_map.values())
         return result
@@ -288,37 +311,66 @@ class LanguageParser:
 
         return list(excluded_exams)
 
-    def _match_standard_code(self, text: str, region: Optional[str] = None) -> Optional[str]:
-        """Extracts a standard grade code from the text."""
+    def _match_standard_codes(self, text: str, region: Optional[str] = None) -> List[str]:
+        """Extracts standard grade codes from the text."""
         text_upper = text.upper().strip()
+        codes = set()
 
-        # Region-specific logic (Europe)
-        if region and '유럽' in region:
-            # English B1/B2 for Europe -> EU_B1/EU_B2
-            # Match "영어 B2", "English B1" etc.
-            if '영어' in text or 'english' in text_upper:
-                b_match = re.search(r'\b(B[12])\b', text_upper)
-                if b_match:
-                    code = f"EU_{b_match.group(1)}"
-                    if code in LANGUAGE_STANDARDS:
-                        return code
+        region_str = str(region).strip() if region else ""
+        is_europe = '유럽' in region_str or '유럽' in text_upper
+        is_asia = '아시아' in region_str or '중국' in text_upper or '일본' in text_upper
 
-        # EU_B1, EU_B2 etc.
-        eu_match = re.search(r'\b(EU_[ABC][12])\b', text_upper)
-        if eu_match and eu_match.group(1) in LANGUAGE_STANDARDS:
-            return eu_match.group(1)
+        # 1. Explicit Europe codes like EU_B2
+        for match in re.finditer(r'\b(EU_[A-E][1-5])\b', text_upper):
+            if match.group(1) in LANGUAGE_STANDARDS:
+                codes.add(match.group(1))
 
-        # A-1, B-2 etc.
-        hyphen_match = re.search(r'\b([A-E]-[1-5])\b', text_upper)
-        if hyphen_match and hyphen_match.group(1) in LEGACY_CODE_ALIASES:
-            return LEGACY_CODE_ALIASES[hyphen_match.group(1)]
+        # 2. Text containing "유럽[무언가]B2" -> EU_B2
+        for match in re.finditer(r'유럽(?:권)?\s*([A-E]-?[1-5])', text_upper):
+            grade = match.group(1).replace('-', '')
+            code = f"EU_{grade}"
+            if code in LANGUAGE_STANDARDS:
+                codes.add(code)
 
-        # A1, B2, C1 etc.
-        simple_match = re.search(r'\b([A-E][1-5])\b', text_upper)
-        if simple_match and simple_match.group(1) in LANGUAGE_STANDARDS:
-            return simple_match.group(1)
+        # 3. Explicit Asia codes
+        for match in re.finditer(r'중국(?:어)?(?:권)?\s*(B-?[1-3])', text_upper):
+            grade = match.group(1).replace('-', '')
+            code = f"CN_{grade}"
+            if code in LANGUAGE_STANDARDS:
+                codes.add(code)
 
-        return None
+        for match in re.finditer(r'일본(?:어)?(?:권)?\s*(C-?[1-2])', text_upper):
+            grade = match.group(1).replace('-', '')
+            code = f"JP_{grade}"
+            if code in LANGUAGE_STANDARDS:
+                codes.add(code)
+
+        # 4. Generic letters (A1, B2, C1, B-2)
+        for match in re.finditer(r'\b([A-E]-?[1-5])\b', text_upper):
+            raw_grade = match.group(1).replace('-', '')
+
+            if raw_grade.startswith('A'):
+                if is_europe and f"EU_{raw_grade}" in LANGUAGE_STANDARDS:
+                    codes.add(f"EU_{raw_grade}")
+                elif raw_grade in LANGUAGE_STANDARDS:
+                    codes.add(raw_grade)
+            elif raw_grade.startswith('B'):
+                if is_europe and f"EU_{raw_grade}" in LANGUAGE_STANDARDS:
+                    codes.add(f"EU_{raw_grade}")
+                else:
+                    code = f"CN_{raw_grade}"
+                    if code in LANGUAGE_STANDARDS: codes.add(code)
+            elif raw_grade.startswith('C'):
+                if is_europe and f"EU_{raw_grade}" in LANGUAGE_STANDARDS:
+                    codes.add(f"EU_{raw_grade}")
+                else:
+                    code = f"JP_{raw_grade}"
+                    if code in LANGUAGE_STANDARDS: codes.add(code)
+            elif raw_grade.startswith('D') or raw_grade.startswith('E'):
+                if raw_grade in LANGUAGE_STANDARDS:
+                    codes.add(raw_grade)
+
+        return list(codes)
 
 class GPAParser:
     """Parse GPA requirements."""
@@ -336,7 +388,10 @@ class GPAParser:
         match = re.search(r"(\d+\.?\d*)", text)
         if match:
             try:
-                return float(match.group(1))
+                gpa = float(match.group(1))
+                if (gpa > 5.0 and gpa < 70) or gpa > 100 or gpa < 1.0:
+                    return None
+                return gpa
             except (ValueError, TypeError):
                 return None
 
