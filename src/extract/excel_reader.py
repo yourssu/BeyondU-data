@@ -12,6 +12,8 @@ from openpyxl.cell.cell import MergedCell
 class ExcelReader:
     """Read and extract data from university exchange program Excel files."""
 
+    _region_mapping_cache: Dict[str, str] = {}
+
     # Column mapping configuration
     COLUMN_MAPPING = {
         "지역": "region",
@@ -139,10 +141,10 @@ class ExcelReader:
 
     @classmethod
     def _get_region_mapping(cls, data_dir: Path) -> Dict[str, str]:
-        if hasattr(cls, "_region_mapping_cache"):
+        if cls._region_mapping_cache:
             return cls._region_mapping_cache
 
-        mapping = {}
+        mapping: Dict[str, str] = {}
         # Use 2024 or 2025 files as reference containing 'region' column
         ref_files = list(data_dir.glob("2024*.xlsx")) + list(data_dir.glob("2025*.xlsx"))
         ref_files = [f for f in ref_files if not f.name.startswith("~")]
