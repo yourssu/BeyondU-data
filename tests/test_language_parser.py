@@ -31,13 +31,13 @@ class TestLanguageStandards:
 
     def test_chinese_codes_exist(self):
         """중국어 B1-B3 코드 존재 확인."""
-        for code in ["B1", "B2", "B3"]:
+        for code in ["CN_B1", "CN_B2", "CN_B3"]:
             assert code in LANGUAGE_STANDARDS
             assert LANGUAGE_STANDARDS[code]["category"] == "CHINESE"
 
     def test_japanese_codes_exist(self):
         """일본어 C1-C2 코드 존재 확인."""
-        for code in ["C1", "C2"]:
+        for code in ["JP_C1", "JP_C2"]:
             assert code in LANGUAGE_STANDARDS
             assert LANGUAGE_STANDARDS[code]["category"] == "JAPANESE"
 
@@ -89,7 +89,7 @@ class TestLanguageParserCodeExpansion:
         assert len(result.scores) == 1
         assert result.scores[0].exam_type == "HSK"
         assert result.scores[0].min_score == 6.0  # 6급
-        assert result.scores[0].level_code == "B1"
+        assert result.scores[0].level_code == "CN_B1"
 
     def test_parse_c1_japanese(self, parser):
         """C1 (일본어) 코드 파싱 - JLPT N1 + JPT 900."""

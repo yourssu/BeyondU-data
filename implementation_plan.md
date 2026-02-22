@@ -1,23 +1,22 @@
-# Excel Reader Refactoring Plan
+# Fixing Failing Tests Implementation Plan
 
 ## 1. Goal Description
-The goal is to simplify `src/extract/excel_reader.py` because the raw Excel files now have a uniform header format. The complex sub-header merging logic can be removed.
-Additionally, 2023 Excel files lack the "지역" (region) column. We need to handle this exception by referencing other data (e.g., a 2024 or 2025 file) to populate the "지역" column based on the "국가" (nation/country).
+The recent changes to `LANGUAGE_STANDARDS` and the `ExcelReader` class have broken some existing tests in `test_extract.py` and `test_language_parser.py`. The goal is to update these tests to match the new desired behaviors.
+
+1. **`test_extract.py`**: The `ExcelReader` was refactored significantly to remove global forward filling (`ffill()`) for merged cells. That responsibility was intentionally moved to `DataCleaner`. Therefore, `test_read_merged_cells` is no longer a valid test for `ExcelReader` and will be updated to expect `NaN` for merged cells, or removed.
+2. **`test_language_parser.py`**: The regional codes for Chinese and Japanese changed from `B1~B3` to `CN_B1~CN_B3` and `C1~C2` to `JP_C1~JP_C2`. The assertions in `test_chinese_codes_exist`, `test_japanese_codes_exist`, and `test_parse_b1_chinese` still expect the old keys. These will be updated.
 
 ## 2. Proposed Changes
 
-### `src/extract/excel_reader.py`
-- Remove the heuristic logic that merges two header rows (`if header_idx + 1 < len(data): ...`).
-- Keep simply `headers = data[header_idx]` and `start_row_idx = header_idx + 1`.
-- Add `"지역": "region"` to `COLUMN_MAPPING`.
-- In `read()`, handle the 2023 exception: 
-  - If `"2023" in self.file_path.name` and `"region"` is missing from columns:
-    - Load a reference Excel file (e.g., `2024-1 교환학생 파견가능대학 및 지원자격(1차).xlsx` or any non-2023 file in the same directory).
-    - Read the reference file's `국가`/`파견국가` -> `지역` mapping.
-    - Map the `nation` column of the 2023 dataframe to fill the `region` column.
+### 2.1 Update `tests/test_extract.py`
+- Modify `test_read_merged_cells` so it correctly asserts that the second row's `nation` value for a merged cell is `nan` (or technically `None` / `float('nan')`), demonstrating that `ExcelReader` is no longer incorrectly forward-filling data, which is now handled downstream.
+
+### 2.2 Update `tests/test_language_parser.py`
+- Modify `test_chinese_codes_exist` to loop over `["CN_B1", "CN_B2", "CN_B3"]`.
+- Modify `test_japanese_codes_exist` to loop over `["JP_C1", "JP_C2"]`.
+- Modify `test_parse_b1_chinese` to assert `level_code == "CN_B1"` instead of `"B1"`.
 
 ## 3. Verification Plan
 - **Automated Tests**:
-  - Run `python scripts/run_etl.py --dry-run` to test the full extraction process without affecting the DB. It should process all 2023-2026 files successfully, and print out logs indicating that "region" is present in the extracted dataframes.
-- **Manual Verification**:
-  - Add debug prints or logs to confirm that for 2023 files, the "region" mapping succeeded.
+    - Run `python -m pytest tests/ -v`
+    - All tests should pass without any `AssertionError`.
