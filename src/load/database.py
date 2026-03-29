@@ -12,6 +12,7 @@ from src.transform.parser import (
     LanguageParser,
     ParsedLanguageRequirement,
     ReviewParser,
+    UniversityParser,
     WebsiteURLParser,
 )
 from src.utils import get_logger
@@ -61,7 +62,6 @@ class DatabaseLoader:
 
     def __init__(self, database_url: Optional[str] = None):
         self.database_url = database_url or settings.database_url
-        print(f"DEBUG: DATABASE_URL = {self.database_url}, type = {type(self.database_url)}")
         if not self.database_url or "://" not in self.database_url:
             raise ValueError(f"Invalid DATABASE_URL: {self.database_url}")
         self.engine = create_engine(self.database_url)
@@ -70,6 +70,7 @@ class DatabaseLoader:
         self._gpa_parser = GPAParser()
         self._website_url_parser = WebsiteURLParser()
         self._review_parser = ReviewParser()
+        self._university_parser = UniversityParser()
 
     def get_region_from_nation(self, nation: str) -> Optional[str]:
         """Get region from nation using the mapping."""
@@ -95,16 +96,17 @@ class DatabaseLoader:
             delete(LanguageRequirement).where(LanguageRequirement.university_id == university_id)
         )
         for score_info in parsed_req.scores:
+            # Skip if explicitly excluded
+            if (score_info.exam_type in parsed_req.excluded_tests or 
+                score_info.exam_type in excluded_exams_from_note):
+                continue
+
             record = LanguageRequirement(
                 university_id=university_id,
                 exam_type=score_info.exam_type,
                 min_score=score_info.min_score,
                 level_code=score_info.level_code,
                 language_group=score_info.language_group,
-                is_available=not (
-                    score_info.exam_type in parsed_req.excluded_tests
-                    or score_info.exam_type in excluded_exams_from_note
-                ),
             )
             session.add(record)
         return len(parsed_req.scores)
@@ -145,7 +147,13 @@ class DatabaseLoader:
 
                 raw_review_text = self._get_field(row, "review_raw")
                 has_review, review_year = self._review_parser.parse(raw_review_text)
-                logger.debug(f"ReviewParser input: '{raw_review_text}', Parsed: has_review={has_review}, review_year='{review_year}'")
+                
+                # Remark and Major parsing
+                raw_remark = "\n".join(filter(None, [self._get_field(row, "remark"), self._get_field(row, "remark_ref")]))
+                location, student_count = self._university_parser.parse_remark(raw_remark)
+                
+                raw_majors = self._get_field(row, "available_majors")
+                available_major, available_subject = self._university_parser.parse_majors(raw_majors)
 
                 # Parse exclusions from significant_note
                 sig_note = self._get_field(row, "significant_note")
@@ -154,15 +162,19 @@ class DatabaseLoader:
                 data = {
                     "semester": new_semester_from_file,
                     "region": region,
-                                    "nation": nation,
-                                    "name_kor": name_kor,
-                                    "name_eng": name_eng,
-                                    "badge": self._get_field(row, "institution"),
-                                    "min_gpa": self._gpa_parser.parse(self._get_field(row, "min_gpa")) or 0.0,
-                                    "significant_note": self._get_field(row, "significant_note"),
-                                    "remark": "\n".join(filter(None, [self._get_field(row, "remark"), self._get_field(row, "remark_ref")])),
-                                    "available_majors": self._get_field(row, "available_majors"),
-                                    "website_url": self._website_url_parser.parse(
+                    "nation": nation,
+                    "name_kor": name_kor,
+                    "name_eng": name_eng,
+                    "badge": self._get_field(row, "institution"),
+                    "min_gpa": self._gpa_parser.parse(self._get_field(row, "min_gpa")) or 0.0,
+                    "significant_note": sig_note,
+                    "remark": raw_remark,
+                    "location": location,
+                    "student_count": student_count,
+                    "available_majors": raw_majors,
+                    "available_major": available_major,
+                    "available_subject": available_subject,
+                    "website_url": self._website_url_parser.parse(
                         self._get_field(row, "website_url")
                     ),
                     "is_exchange": "교환" in program_type_str,
@@ -170,15 +182,7 @@ class DatabaseLoader:
                     "has_review": has_review,
                     "review_year": review_year,
                     "language_score": lang_req_parse_text,
-                    "available_semester": self._get_field(row, "available_semester"), # 이 부분은 더 이상 모델에 없음
-
                 }
-
-                # 모델에서 제거된 컬럼이 data에 남아있을 경우 제거
-                if "available_semester" in data:
-                    del data["available_semester"]
-                if "thumbnail_url" in data: # 혹시 모를 경우를 대비하여 추가
-                    del data["thumbnail_url"]
 
                 composite_key = (name_eng, nation)
                 university = existing_map.get(composite_key)

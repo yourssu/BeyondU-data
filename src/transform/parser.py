@@ -138,12 +138,15 @@ class LanguageParser:
             result.is_optional = True
             return result
 
+        # Extract exclusions from the text itself
+        excluded_tests = []
         for pattern in self.EXCLUDE_PATTERNS:
             if re.search(pattern, text, re.IGNORECASE):
                 if "TOEIC" in pattern or "토익" in pattern:
-                    result.excluded_tests.append("TOEIC")
+                    excluded_tests.append("TOEIC")
                 if "ITP" in pattern:
-                    result.excluded_tests.append("TOEFL_ITP")
+                    excluded_tests.append("TOEFL_ITP")
+        result.excluded_tests = excluded_tests
 
         # Step 1: Code-based parsing to set baseline requirements
         matched_codes = self._match_standard_codes(text, region)
@@ -168,8 +171,6 @@ class LanguageParser:
                 try:
                     raw_score = match.group(1)
                     if exam_type in ("DELF", "ZD", "DELE", "CELI", "CILS"):
-                        # This line is potentially problematic as `match.group(0)` might not always contain the level code directly
-                        # Re-evaluate logic if this doesn't work.
                         raw_score = match.group(0).split()[-1]
 
                     score = converter(raw_score)
@@ -458,28 +459,74 @@ class ReviewParser:
         if text_upper in ("X", "N", "NO", "NONE", "-"):
             return False, None
 
-        # Logic:
-        # 1. Look for year pattern (4 digits, or range like 2013-2019)
-        # 2. If year found, assume True.
-        # 3. If no year, check for positive indicators (Y, O, YES, EXIST, etc.)
-
         # Year pattern: 20xx or 20xx-20xx
         year_match = re.search(r"(20\d{2}(?:\s*-\s*20\d{2})?)", text_str)
         if year_match:
             return True, year_match.group(1).strip()
 
         # Positive indicators
-        # Starts with Y, O, or is "있음", "존재", etc.
         positive_keywords = ["Y", "O", "YES", "TRUE", "AVAILABLE", "있음", "후기", "수기"]
 
-        # Check if it starts with any positive keyword or matches exactly
         for keyword in positive_keywords:
             if text_upper.startswith(keyword):
                 return True, None
 
-        # If it's just some non-negative text, valid review might be implied?
-        # But let's be conservative. If it's not X and doesn't have Year,
-        # but has some content...
-        # Let's stick to explicit positive start or year presence.
-
         return False, None
+
+class UniversityParser:
+    """Parse university-specific fields like remark and available majors."""
+
+    def parse_remark(self, remark: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Extract location and student count from remark text.
+        
+        Example: "위치: Groningen, Assen, Leeuwarden * 특징: 학생 수 약 28,000명 ..."
+        Returns: ("Groningen, Assen, Leeuwarden", "28,000")
+        """
+        if not remark or not str(remark).strip():
+            return None, None
+
+        remark_str = str(remark).strip()
+        location = None
+        student_count = None
+
+        # Extract Location
+        location_match = re.search(r"위치:\s*([^#*]+)", remark_str)
+        if location_match:
+            location = location_match.group(1).strip()
+
+        # Extract Student Count
+        # Matches "학생 수 약 28,000명", "학생 수: 28,000명", "약 28,000명"
+        student_match = re.search(r"(?:학생\s*수(?:\s*약)?|약)\s*([\d,]+)\s*명", remark_str)
+        if student_match:
+            student_count = student_match.group(1).strip()
+
+        return location, student_count
+
+    def parse_majors(self, majors_text: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Extract available majors and subject catalog URL.
+        
+        Example: "★ 수학가능학과: Life Science... ★ 수강가능과목(2024): https://..."
+        Returns: ("Life Science...", "https://...")
+        """
+        if not majors_text or not str(majors_text).strip():
+            return None, None
+
+        text = str(majors_text).strip()
+        major = None
+        subject_url = None
+
+        # Extract Major
+        major_match = re.search(r"수학\s*가능\s*학과\s*:\s*(.*?)(?:\s*★|$)", text)
+        if major_match:
+            major = major_match.group(1).strip()
+
+        # Extract Subject URL
+        # Look for a URL after "수강가능과목"
+        url_parser = WebsiteURLParser()
+        subject_url_match = re.search(r"수강\s*가능\s*과목.*?(https?://\S+|www\.\S+)", text)
+        if subject_url_match:
+            subject_url = url_parser.parse(subject_url_match.group(1))
+
+        return major, subject_url

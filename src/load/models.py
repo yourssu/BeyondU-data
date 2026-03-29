@@ -1,15 +1,18 @@
 """SQLAlchemy models for university exchange program data."""
 
+import datetime
 from typing import List, Optional
 
 from sqlalchemy import (
     BigInteger,
     Boolean,
+    DateTime,
     Float,
     ForeignKey,
     Index,
     String,
     Text,
+    func,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -45,9 +48,6 @@ class LanguageRequirement(Base):
     )
     level_code: Mapped[Optional[str]] = mapped_column(
         String(50), nullable=True, comment="레벨/등급 (예: B2, N2 등)"
-    )
-    is_available: Mapped[bool] = mapped_column(
-        Boolean, default=True, nullable=False, comment="해당 시험 인정 여부"
     )
 
     # Relationships
@@ -95,8 +95,20 @@ class University(Base):
         Text, nullable=True, comment="주요사항"
     )
     remark: Mapped[str] = mapped_column(Text, nullable=False, comment="기타 참고사항 (비고)")
+    location: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, comment="학교 위치"
+    )
+    student_count: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True, comment="학생 수"
+    )
     available_majors: Mapped[Optional[str]] = mapped_column(
-        Text, nullable=True, comment="교환학생 수강 가능한 전공 목록"
+        Text, nullable=True, comment="교환학생 수강 가능한 전공 목록 (원본)"
+    )
+    available_major: Mapped[Optional[str]] = mapped_column(
+        Text, nullable=True, comment="수강 가능 학과"
+    )
+    available_subject: Mapped[Optional[str]] = mapped_column(
+        Text, nullable=True, comment="수강 가능 과목 (URL 등)"
     )
     website_url: Mapped[Optional[str]] = mapped_column(
         Text, nullable=True, comment="공식 홈페이지 주소"
@@ -120,6 +132,13 @@ class University(Base):
     )
     language_score: Mapped[Optional[str]] = mapped_column(
         Text, nullable=True, comment="어학성적 원문"
+    )
+
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, server_default=func.now(), comment="생성 일시"
+    )
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), comment="수정 일시"
     )
 
     # Relationships
