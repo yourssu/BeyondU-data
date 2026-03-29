@@ -479,7 +479,7 @@ class UniversityParser:
     def parse_remark(self, remark: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
         """
         Extract location and student count from remark text.
-        
+
         Example: "위치: Groningen, Assen, Leeuwarden * 특징: 학생 수 약 28,000명 ..."
         Returns: ("Groningen, Assen, Leeuwarden", "28,000")
         """
@@ -506,7 +506,7 @@ class UniversityParser:
     def parse_majors(self, majors_text: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
         """
         Extract available majors and subject catalog URL.
-        
+
         Example: "★ 수학가능학과: Life Science... ★ 수강가능과목(2024): https://..."
         Returns: ("Life Science...", "https://...")
         """

@@ -97,7 +97,7 @@ class DatabaseLoader:
         )
         for score_info in parsed_req.scores:
             # Skip if explicitly excluded
-            if (score_info.exam_type in parsed_req.excluded_tests or 
+            if (score_info.exam_type in parsed_req.excluded_tests or
                 score_info.exam_type in excluded_exams_from_note):
                 continue
 
@@ -147,11 +147,11 @@ class DatabaseLoader:
 
                 raw_review_text = self._get_field(row, "review_raw")
                 has_review, review_year = self._review_parser.parse(raw_review_text)
-                
+
                 # Remark and Major parsing
                 raw_remark = "\n".join(filter(None, [self._get_field(row, "remark"), self._get_field(row, "remark_ref")]))
                 location, student_count = self._university_parser.parse_remark(raw_remark)
-                
+
                 raw_majors = self._get_field(row, "available_majors")
                 available_major, available_subject = self._university_parser.parse_majors(raw_majors)
 
