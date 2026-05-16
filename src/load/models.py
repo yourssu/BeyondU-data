@@ -10,47 +10,61 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Index,
+    Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
+# SQLite only auto-increments for INTEGER PRIMARY KEY, so use an Integer
+# variant there while keeping BigInteger elsewhere.
+SQLITE_COMPATIBLE_BIGINT = BigInteger().with_variant(Integer, "sqlite")
+
+
 class Base(DeclarativeBase):
     """Base class for all models."""
 
-    pass
-
 
 class LanguageRequirement(Base):
-    """
-    대학별 어학 성적 요구사항 테이블.
-    """
+    """Parsed language requirement rows for one university offering."""
 
     __tablename__ = "language_requirement"
 
     id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True, comment="어학 요구사항 고유 식별자"
+        SQLITE_COMPATIBLE_BIGINT,
+        primary_key=True,
+        autoincrement=True,
+        comment="Language requirement primary key",
     )
     university_id: Mapped[int] = mapped_column(
         ForeignKey("university.id", ondelete="CASCADE"),
-        nullable=False, comment="대학교 ID"
+        nullable=False,
+        comment="University row ID",
     )
     language_group: Mapped[str] = mapped_column(
-        String(50), nullable=False, comment="언어권 분류 (ENGLISH, JAPANESE 등)"
+        String(50),
+        nullable=False,
+        comment="Language group such as ENGLISH or JAPANESE",
     )
     exam_type: Mapped[str] = mapped_column(
-        String(50), nullable=False, comment="시험 종류 (TOEFL, IELTS, JLPT 등)"
+        String(50),
+        nullable=False,
+        comment="Exam type such as TOEFL, IELTS, or JLPT",
     )
     min_score: Mapped[float] = mapped_column(
-        Float, nullable=False, comment="요구되는 최소 점수"
+        Float,
+        nullable=False,
+        comment="Minimum score",
     )
     level_code: Mapped[Optional[str]] = mapped_column(
-        String(50), nullable=True, comment="레벨/등급 (예: B2, N2 등)"
+        String(50),
+        nullable=True,
+        comment="Optional grade or level code",
     )
 
-    # Relationships
     university: Mapped["University"] = relationship(
         back_populates="language_requirements"
     )
@@ -68,94 +82,151 @@ class LanguageRequirement(Base):
 
 
 class University(Base):
-    """
-    파견 대학 정보 테이블.
-    """
+    """One university offering for one semester."""
 
     __tablename__ = "university"
 
     id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True, comment="대학교 고유 식별자"
+        SQLITE_COMPATIBLE_BIGINT,
+        primary_key=True,
+        autoincrement=True,
+        comment="University primary key",
     )
-    semester: Mapped[str] = mapped_column(String(100), nullable=False, comment="모집 학기")
+    semester: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        comment="Single semester for this offering",
+    )
     region: Mapped[str] = mapped_column(
-        String(100), nullable=False, comment="학교가 위치한 지역 (예: Europe, Asia)"
+        String(100),
+        nullable=False,
+        comment="Region",
     )
     nation: Mapped[str] = mapped_column(
-        String(100), nullable=False, comment="학교가 속한 국가"
+        String(100),
+        nullable=False,
+        comment="Country",
     )
     name_kor: Mapped[str] = mapped_column(
-        String(255), nullable=False, comment="대학교 한글 명칭"
+        String(255),
+        nullable=False,
+        comment="Korean university name",
     )
     name_eng: Mapped[str] = mapped_column(
-        String(255), nullable=False, comment="대학교 영문 명칭"
+        String(255),
+        nullable=False,
+        comment="English university name",
     )
-    min_gpa: Mapped[float] = mapped_column(Float, nullable=False, comment="지원을 위한 최소 GPA")
+    min_gpa: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+        comment="Minimum GPA",
+    )
     significant_note: Mapped[Optional[str]] = mapped_column(
-        Text, nullable=True, comment="주요사항"
+        Text,
+        nullable=True,
+        comment="Important notes",
     )
-    remark: Mapped[str] = mapped_column(Text, nullable=False, comment="기타 참고사항 (비고)")
+    remark: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Merged remark field",
+    )
     location: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, comment="학교 위치"
+        String(255),
+        nullable=True,
+        comment="University location",
     )
     student_count: Mapped[Optional[str]] = mapped_column(
-        String(100), nullable=True, comment="학생 수"
+        String(100),
+        nullable=True,
+        comment="Student count",
     )
     available_majors: Mapped[Optional[str]] = mapped_column(
-        Text, nullable=True, comment="교환학생 수강 가능한 전공 목록 (원본)"
+        Text,
+        nullable=True,
+        comment="Raw available majors text",
     )
     available_major: Mapped[Optional[str]] = mapped_column(
-        Text, nullable=True, comment="수강 가능 학과"
+        Text,
+        nullable=True,
+        comment="Parsed available major",
     )
     available_subject: Mapped[Optional[str]] = mapped_column(
-        Text, nullable=True, comment="수강 가능 과목 (URL 등)"
+        Text,
+        nullable=True,
+        comment="Parsed subject catalog URL",
     )
     website_url: Mapped[Optional[str]] = mapped_column(
-        Text, nullable=True, comment="공식 홈페이지 주소"
+        Text,
+        nullable=True,
+        comment="Official website URL",
     )
-
     badge: Mapped[Optional[str]] = mapped_column(
-        String(100), nullable=True, comment="뱃지 (기관 정보)"
+        String(100),
+        nullable=True,
+        comment="Institution or badge label",
     )
-
     is_exchange: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False, comment="교환학생 파견 가능 여부"
+        Boolean,
+        default=False,
+        nullable=False,
+        comment="Whether exchange program is available",
     )
     is_visit: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False, comment="방문학생 파견 가능 여부"
+        Boolean,
+        default=False,
+        nullable=False,
+        comment="Whether visiting program is available",
     )
     has_review: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False, comment="교환학생 수기 존재 여부"
+        Boolean,
+        default=False,
+        nullable=False,
+        comment="Whether a student review exists",
     )
     review_year: Mapped[Optional[str]] = mapped_column(
-        String(50), nullable=True, comment="수기 연도 (예: 2018, 2013-2019)"
+        String(50),
+        nullable=True,
+        comment="Review year or year range",
     )
     language_score: Mapped[Optional[str]] = mapped_column(
-        Text, nullable=True, comment="어학성적 원문"
+        Text,
+        nullable=True,
+        comment="Raw language requirement text",
     )
-
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, server_default=func.now(), comment="생성 일시"
+        DateTime,
+        server_default=func.now(),
+        comment="Created at",
     )
     updated_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, server_default=func.now(), onupdate=func.now(), comment="수정 일시"
+        DateTime,
+        server_default=func.now(),
+        onupdate=func.now(),
+        comment="Updated at",
     )
 
-    # Relationships
     language_requirements: Mapped[List["LanguageRequirement"]] = relationship(
         back_populates="university",
         cascade="all, delete-orphan",
     )
 
     __table_args__ = (
+        UniqueConstraint("name_eng", "nation", "semester", name="uq_university_semester"),
         Index("idx_university_nation", "nation"),
         Index("idx_university_region", "region"),
         Index("idx_university_name_kor", "name_kor"),
+        Index(
+            "idx_university_name_eng_nation_semester",
+            "name_eng",
+            "nation",
+            "semester",
+        ),
     )
 
     def __repr__(self) -> str:
         return (
-            f"<University(id={self.id}, name_kor='{self.name_kor}', nation='{self.nation}')>"
+            f"<University(id={self.id}, name_kor='{self.name_kor}', "
+            f"nation='{self.nation}', semester='{self.semester}')>"
         )
-
-

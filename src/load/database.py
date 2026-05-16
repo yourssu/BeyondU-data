@@ -1,6 +1,7 @@
 """Database operations for loading processed data."""
 
 from typing import Any, Dict, List, Optional
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import pandas as pd
 from sqlalchemy import create_engine, delete, select
@@ -72,6 +73,28 @@ class DatabaseLoader:
         self._review_parser = ReviewParser()
         self._university_parser = UniversityParser()
 
+    def get_display_database_url(self) -> str:
+        """Return the configured database URL with credentials safely masked."""
+        parts = urlsplit(self.database_url)
+        hostname = parts.hostname or ""
+        userinfo = ""
+        if parts.username:
+            userinfo = parts.username
+            if parts.password is not None:
+                userinfo += ":***"
+            userinfo += "@"
+
+        hostinfo = hostname
+        if parts.port:
+            hostinfo += f":{parts.port}"
+
+        query_items = parse_qsl(parts.query, keep_blank_values=True)
+        filtered_query = urlencode(
+            [(key, value) for key, value in query_items if "password" not in key.lower()]
+        )
+        netloc = f"{userinfo}{hostinfo}"
+        return urlunsplit((parts.scheme, netloc, parts.path, filtered_query, parts.fragment))
+
     def get_region_from_nation(self, nation: str) -> Optional[str]:
         """Get region from nation using the mapping."""
         return self.COUNTRY_TO_REGION_MAP.get(nation)
@@ -115,26 +138,25 @@ class DatabaseLoader:
         """Load a cleaned DataFrame into the database using an upsert strategy."""
         stats = {"inserted": 0, "updated": 0, "skipped": 0, "language_reqs": 0}
         with self.SessionLocal() as session:
-            # Use name_eng and nation as a composite key to find existing records
-            eng_names = df.get("name_eng", pd.Series()).dropna().unique()
+            # One row now represents one university offering in one semester.
+            eng_names = df.get("name_eng", pd.Series(dtype="object")).dropna().unique()
             existing_map = {}
             if len(eng_names) > 0:
                 stmt = select(University).where(University.name_eng.in_(eng_names))
                 for uni in session.execute(stmt).scalars():
-                    existing_map[(uni.name_eng, uni.nation)] = uni
+                    existing_map[(uni.name_eng, uni.nation, uni.semester)] = uni
 
             for _, row in df.iterrows():
                 name_kor = self._get_field(row, "name_kor")
                 name_eng = self._get_field(row, "name_eng")
                 nation = self._get_field(row, "nation")
+                semester = self._get_field(row, "semester")
 
-                if not all([name_kor, name_eng, nation]):
+                if not all([name_kor, name_eng, nation, semester]):
                     stats["skipped"] += 1
                     continue
 
                 program_type_str = self._get_field(row, "program_type", "일반교환")
-                new_semester_from_file = self._get_field(row, "semester")
-
                 # Get text for parsing language scores
                 lang_req_parse_text = self._get_field(row, "language_requirement")
 
@@ -160,7 +182,7 @@ class DatabaseLoader:
                 excluded_exams = self._language_parser.parse_exclusions(sig_note)
 
                 data = {
-                    "semester": new_semester_from_file,
+                    "semester": semester,
                     "region": region,
                     "nation": nation,
                     "name_kor": name_kor,
@@ -184,22 +206,10 @@ class DatabaseLoader:
                     "language_score": lang_req_parse_text,
                 }
 
-                composite_key = (name_eng, nation)
+                composite_key = (name_eng, nation, semester)
                 university = existing_map.get(composite_key)
 
                 if university:  # Update existing university
-                    # Handle cumulative update for semester
-                    if new_semester_from_file:
-                        existing_semesters = (
-                            set(university.semester.split(", "))
-                            if university.semester
-                            else set()
-                        )
-                        existing_semesters.add(new_semester_from_file)
-                        data["semester"] = ", ".join(
-                            sorted(list(existing_semesters), reverse=True)
-                        )
-
                     for key, value in data.items():
                         setattr(university, key, value)
                     stats["updated"] += 1
