@@ -101,10 +101,15 @@ def main() -> None:
         action="store_true",
         help="Only process the latest file (by filename)",
     )
+    parser.add_argument(
+        "--database-url",
+        help="Optional SQLAlchemy database URL. Defaults to DATABASE_URL from .env.",
+    )
     args = parser.parse_args()
 
     # Initialize database
-    loader = DatabaseLoader()
+    loader = DatabaseLoader(database_url=args.database_url)
+    logger.info(f"Using database: {loader.get_display_database_url()}")
 
     if args.drop_db:
         logger.info("Dropping database tables...")
@@ -136,7 +141,7 @@ def main() -> None:
     logger.info(f"Files to process: {[f.name for f in files]}")
 
     # Process files
-    total_stats = {"inserted": 0, "updated": 0, "skipped": 0}
+    total_stats = {"inserted": 0, "updated": 0, "skipped": 0, "language_reqs": 0}
 
     for file_path in files:
         try:

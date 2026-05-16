@@ -4,6 +4,8 @@ __pycache__/
 *$py.class
 *.so
 .Python
+.pydeps/
+.pydeps_user/
 venv/
 .venv/
 env/
@@ -33,6 +35,7 @@ data/processed/*.json
 .coverage
 htmlcov/
 .mypy_cache/
+etl_debug.log
 
 # DB
 test.db
