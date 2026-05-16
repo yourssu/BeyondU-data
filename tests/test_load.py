@@ -118,3 +118,63 @@ def test_same_semester_updates_existing_row(sqlite_loader: DatabaseLoader) -> No
     assert university.badge == "Updated Badge"
     assert university.min_gpa == 3.8
     assert university.review_year == "2025"
+
+
+def test_unknown_region_is_backfilled_from_nation(sqlite_loader: DatabaseLoader) -> None:
+    """Unknown region values should be mapped from nation before save."""
+    df = pd.DataFrame(
+        [
+            {
+                "name_kor": "터키 대학",
+                "name_eng": "Turkey University",
+                "nation": "터키",
+                "region": "Unknown",
+                "program_type": "교환학생",
+                "semester": "2023-1",
+                "institution": "Badge",
+                "min_gpa": "3.0",
+                "significant_note": "",
+                "language_requirement": "",
+                "website_url": "http://turkey.edu",
+                "available_majors": "Business",
+                "review_raw": "X",
+            }
+        ]
+    )
+
+    stats = sqlite_loader.load_universities_dataframe(df)
+
+    assert stats["inserted"] == 1
+    universities = sqlite_loader.get_all_universities()
+    assert len(universities) == 1
+    assert universities[0].region == "유럽"
+
+
+def test_unknown_region_is_backfilled_for_kyrgyzstan(sqlite_loader: DatabaseLoader) -> None:
+    """Unknown region for Kyrgyzstan should be saved as Asia."""
+    df = pd.DataFrame(
+        [
+            {
+                "name_kor": "키르기즈 대학",
+                "name_eng": "Kyrgyz University",
+                "nation": "키르기즈스탄",
+                "region": "Unknown",
+                "program_type": "교환학생",
+                "semester": "2023-2",
+                "institution": "Badge",
+                "min_gpa": "3.0",
+                "significant_note": "",
+                "language_requirement": "",
+                "website_url": "http://kyrgyz.edu",
+                "available_majors": "Business",
+                "review_raw": "X",
+            }
+        ]
+    )
+
+    stats = sqlite_loader.load_universities_dataframe(df)
+
+    assert stats["inserted"] == 1
+    universities = sqlite_loader.get_all_universities()
+    assert len(universities) == 1
+    assert universities[0].region == "아시아"

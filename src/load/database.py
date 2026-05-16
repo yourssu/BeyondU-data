@@ -97,6 +97,8 @@ class DatabaseLoader:
 
     def get_region_from_nation(self, nation: str) -> Optional[str]:
         """Get region from nation using the mapping."""
+        if nation == "키르기즈스탄":
+            return "아시아"
         return self.COUNTRY_TO_REGION_MAP.get(nation)
 
     def create_tables(self) -> None:
@@ -163,6 +165,11 @@ class DatabaseLoader:
                 # Get region and map if unclassified
                 region = self._get_field(row, "region", "미분류")
                 if region == "미분류":
+                    mapped_region = self.get_region_from_nation(nation)
+                    if mapped_region:
+                        region = mapped_region
+
+                if isinstance(region, str) and region.strip().lower() == "unknown":
                     mapped_region = self.get_region_from_nation(nation)
                     if mapped_region:
                         region = mapped_region
