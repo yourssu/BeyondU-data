@@ -9,15 +9,14 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
-    func,
     Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-
 
 # SQLite only auto-increments for INTEGER PRIMARY KEY, so use an Integer
 # variant there while keeping BigInteger elsewhere.

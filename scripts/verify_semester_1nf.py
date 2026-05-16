@@ -7,20 +7,18 @@ from pathlib import Path
 import pandas as pd
 from sqlalchemy import delete, select
 
-# Add project root to sys.path
-project_root = Path(__file__).resolve().parent.parent
-sys.path.append(str(project_root))
-
-from src.load.database import DatabaseLoader
-from src.load.models import LanguageRequirement, University
-
-
 TEST_NAME_ENG = "Semester University"
 TEST_NATION = "Semester Land"
 
 
 def verify_semester_1nf(database_url: str | None = None) -> None:
     """Ensure the same university is stored as separate rows per semester."""
+    project_root = Path(__file__).resolve().parent.parent
+    sys.path.append(str(project_root))
+
+    from src.load.database import DatabaseLoader
+    from src.load.models import LanguageRequirement, University
+
     loader = DatabaseLoader(database_url=database_url)
     loader.create_tables()
     print(f"Using database: {loader.get_display_database_url()}")

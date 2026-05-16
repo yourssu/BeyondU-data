@@ -35,6 +35,7 @@ data/processed/*.json
 .coverage
 htmlcov/
 .mypy_cache/
+pytest-of-*/
 etl_debug.log
 
 # DB

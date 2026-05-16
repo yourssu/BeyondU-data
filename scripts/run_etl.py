@@ -1,32 +1,27 @@
 """Main ETL pipeline runner."""
 
 import argparse
+import logging
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Union, Tuple
+from typing import TYPE_CHECKING, Dict
 
-import logging
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from src.config import settings
-from src.extract import ExcelReader
-from src.load import DatabaseLoader
-from src.transform import DataCleaner
-from src.utils import get_logger
-
-logger = get_logger(__name__, level=logging.DEBUG)
-file_handler = logging.FileHandler("etl_debug.log", encoding="utf-8")
-file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-logger.addHandler(file_handler)
+if TYPE_CHECKING:
+    from src.load import DatabaseLoader
 
 
 def process_file(
     file_path: Path,
-    loader: DatabaseLoader,
+    loader: "DatabaseLoader",
     dry_run: bool = False,
 ) -> Dict[str, int]:
     """Process a single Excel file through the ETL pipeline."""
+    from src.extract import ExcelReader
+    from src.transform import DataCleaner
+    from src.utils import get_logger
+
+    logger = get_logger(__name__, level=logging.DEBUG)
+
     logger.info(f"Processing: {file_path.name}")
 
     # Extract
@@ -69,6 +64,19 @@ def process_file(
 
 
 def main() -> None:
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+
+    from src.config import settings
+    from src.load import DatabaseLoader
+    from src.utils import get_logger
+
+    logger = get_logger(__name__, level=logging.DEBUG)
+    file_handler = logging.FileHandler("etl_debug.log", encoding="utf-8")
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    )
+    logger.addHandler(file_handler)
+
     parser = argparse.ArgumentParser(description="Run ETL pipeline for exchange data")
     parser.add_argument(
         "--input",

@@ -6,15 +6,14 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from src.load.database import DatabaseLoader
-from src.load.models import University
-
 
 def main() -> None:
     """Display university and language requirement data."""
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+
+    from src.load.database import DatabaseLoader
+    from src.load.models import University
+
     parser = argparse.ArgumentParser(description="View data from the database.")
     parser.add_argument("--limit", type=int, default=20, help="Number of rows to display.")
     parser.add_argument("--output-file", type=Path, help="Path to save the output.")

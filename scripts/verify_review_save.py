@@ -7,20 +7,18 @@ from pathlib import Path
 import pandas as pd
 from sqlalchemy import delete, select
 
-# Add project root to sys.path
-project_root = Path(__file__).resolve().parent.parent
-sys.path.append(str(project_root))
-
-from src.load.database import DatabaseLoader
-from src.load.models import LanguageRequirement, University
-
-
 TEST_NAME_ENG = "Review University"
 TEST_SEMESTER = "2024-1"
 
 
 def verify_review_save(database_url: str | None = None) -> None:
     """Write one test row and verify review fields were saved."""
+    project_root = Path(__file__).resolve().parent.parent
+    sys.path.append(str(project_root))
+
+    from src.load.database import DatabaseLoader
+    from src.load.models import LanguageRequirement, University
+
     loader = DatabaseLoader(database_url=database_url)
     loader.create_tables()
     print(f"Using database: {loader.get_display_database_url()}")
